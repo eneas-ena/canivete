@@ -1,7 +1,7 @@
 {
-  "name": "Memória · Canivete do Bispo",
-  "short_name": "Memória",
-  "description": "Digite uma chave (texto bíblico ou tema) e veja o que você já pregou, ensinou e escreveu sobre ela.",
+  "name": "Canivete do Bispo",
+  "short_name": "Canivete",
+  "description": "Tudo do ministério num lugar só: a tela Hoje e a Memória do que você já pregou, ensinou e escreveu.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",

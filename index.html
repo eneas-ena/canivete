@@ -3,101 +3,128 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Memória · Canivete</title>
+<title>Hoje · Canivete</title>
 <meta name="theme-color" content="#0F1B33">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Memória">
+<meta name="apple-mobile-web-app-title" content="Canivete">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Memória" data-versao="0.2.0"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.3.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --fundo:#0B1426; --cartao:#13213D; --cartao2:#182A4C; --texto:#F3EEDF; --mudo:#A8B3C7;
-  --borda:#26385C; --ouro:#C9A227; --ouroTexto:#D9B64A; --marca:#2B2410; --perigo:#E58B7A;
+  --borda:#26385C; --ouro:#C9A227; --ouroTexto:#D9B64A; --marca:#2B2410; --perigo:#E58B7A; --ok:#5FC58A;
+  --ok-bg:#1E4A33; --ok-fg:#8FE0B0; --meio-bg:#4A3E14; --meio-fg:#F0D27A; --novo-bg:#26385C; --novo-fg:#C8D1E0;
 }
 [data-tema="claro"]{
   --fundo:#F5F1E6; --cartao:#FFFFFF; --cartao2:#F8F4EA; --texto:#0F1B33; --mudo:#4E5A70;
-  --borda:#E2D9C2; --ouro:#C9A227; --ouroTexto:#7D600B; --marca:#F6E7A6; --perigo:#A33A26;
+  --borda:#E2D9C2; --ouro:#C9A227; --ouroTexto:#7D600B; --marca:#F6E7A6; --perigo:#A33A26; --ok:#1E7A46;
+  --ok-bg:#DDF1E4; --ok-fg:#1E5E38; --meio-bg:#F6EBC8; --meio-fg:#6B520A; --novo-bg:#ECE6D6; --novo-fg:#4E5A70;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--fundo);color:var(--texto);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-text-size-adjust:100%}
 button{font:inherit;cursor:pointer}
-.app{max-width:980px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 40px)}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.marca{display:flex;flex-direction:column}
+a{color:var(--ouroTexto)}
+.app{max-width:1240px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 20px calc(env(safe-area-inset-bottom,0px) + 96px)}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.marca{display:flex;align-items:center;gap:14px}
+.marca img{width:52px;height:52px;border-radius:12px}
 .marca small{font-family:Cinzel,serif;font-size:12px;letter-spacing:3px;color:var(--ouroTexto)}
-.marca h1{margin:0;font-family:'Cormorant Garamond',serif;font-size:36px;line-height:1.05}
+.marca h1{margin:0;font-family:'Cormorant Garamond',serif;font-size:32px;line-height:1.05}
 .marca p{margin:2px 0 0;color:var(--mudo);font-size:14px}
-.acoes{display:flex;align-items:center;gap:8px}
+.acoes{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pilula{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--borda);background:var(--cartao);font-size:14px}
+.pilula .mudo{color:var(--mudo);font-size:13px}
+.sobe{color:var(--perigo)} .desce{color:var(--ok)}
 .icone{width:44px;height:44px;border-radius:999px;border:1px solid var(--borda);background:var(--cartao);color:var(--ouroTexto);display:flex;align-items:center;justify-content:center}
 .versao{font-size:12px;color:var(--mudo);padding:0 4px}
-form.busca{margin-top:22px;display:flex;gap:10px}
-form.busca input{flex:1;min-width:0;height:54px;border-radius:14px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);padding:0 16px;font-size:18px}
-form.busca input:focus{outline:2px solid var(--ouro);border-color:var(--ouro)}
-.btn{height:54px;padding:0 20px;border-radius:14px;border:none;background:var(--ouro);color:#0F1B33;font-weight:600;font-size:16px}
-.dicas{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.dicas span{font-size:13px;color:var(--mudo)}
-.chip{min-height:36px;padding:6px 12px;border-radius:999px;border:1px solid var(--borda);background:transparent;color:var(--texto);font-size:14px}
-.chip.ativo{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
-.resumo{margin-top:26px;font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600}
-.resumo small{display:block;font-family:Inter,sans-serif;font-size:14px;font-weight:400;color:var(--mudo);margin-top:2px}
-.filtros{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
-.grupo{margin-top:24px}
-.grupo h2{font-family:Cinzel,serif;font-size:13px;letter-spacing:2px;color:var(--ouroTexto);margin:0 0 10px;font-weight:600}
-.grupo h2 span{color:var(--mudo);font-family:Inter,sans-serif;letter-spacing:0;font-weight:400}
-.lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
-.item{text-align:left;width:100%;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
-.item:hover{border-color:var(--ouro)}
-.item .titulo{font-size:16px;font-weight:600;line-height:1.3}
-.item .ref{font-size:14px;color:var(--ouroTexto);font-weight:500}
-.item .tema{font-size:13px;color:var(--mudo)}
-.item .rodape{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px}
-.selo{font-size:12px;padding:3px 8px;border-radius:999px;background:var(--cartao2);color:var(--texto)}
-.selo.repetido{background:var(--marca);color:var(--texto);font-weight:600}
-.vazio,.erro{margin-top:30px;padding:18px;border-radius:14px;border:1px dashed var(--borda);color:var(--mudo);font-size:15px;line-height:1.5}
-.erro{border-style:solid;color:var(--perigo)}
-.carregando{margin-top:30px;color:var(--mudo)}
-/* leitura */
-#leitor{position:fixed;inset:0;z-index:50;background:rgba(5,10,20,.55);display:none;align-items:stretch;justify-content:flex-end}
-#leitor.aberto{display:flex}
-#leitor .painel{width:min(720px,100%);height:100%;background:var(--fundo);border-left:1px solid var(--borda);display:flex;flex-direction:column}
-#leitor .topo{padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 14px;border-bottom:1px solid var(--borda);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
-#leitor .topo h3{margin:0;font-family:'Cormorant Garamond',serif;font-size:28px;line-height:1.1}
-#leitor .meta{margin-top:6px;font-size:14px;color:var(--mudo);line-height:1.5}
-#leitor .meta b{color:var(--ouroTexto);font-weight:500}
-#leitor .corpo{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:18px 22px calc(env(safe-area-inset-bottom,0px) + 30px);font-size:17px;line-height:1.65;white-space:pre-wrap}
-mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
-#lNav{display:none;align-items:center;justify-content:space-between;gap:8px;padding:10px 18px;border-bottom:1px solid var(--borda);background:var(--cartao)}
-#lNav.ativo{display:flex}
-#lNav .meio{font-size:14px;color:var(--mudo);text-align:center}
-#lNav .meio b{color:var(--texto)}
-.navbtn{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--borda);background:transparent;color:var(--texto);font-size:14px}
-.navbtn:disabled{opacity:.35}
-.versoes{white-space:normal;display:flex;flex-direction:column;gap:10px}
-.versoes .aviso{font-size:14px;color:var(--mudo);line-height:1.5}
-.versao-item{text-align:left;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
-.versao-item:hover{border-color:var(--ouro)}
-.versao-item .num{flex:none;width:40px;height:40px;border-radius:10px;background:var(--cartao2);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--ouroTexto)}
-.versao-item .info{display:flex;flex-direction:column;gap:4px;font-size:15px;line-height:1.4}
-.versao-item .info small{font-size:13px;color:var(--mudo)}
-.letra{display:inline-block;min-width:22px;text-align:center;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--marca)}
-.rodape-app{margin-top:40px;text-align:center;font-size:12px;color:var(--mudo)}
-@media (max-width:560px){ .marca h1{font-size:30px} form.busca{flex-direction:column} form.busca input{flex:none;width:100%} .btn{width:100%} }
+.alerta{margin-top:16px;padding:12px 16px;border-radius:14px;border:1px solid var(--perigo);color:var(--texto);background:var(--cartao);display:flex;gap:10px;align-items:center;font-size:14px}
+.alerta b{color:var(--perigo)}
+.grade{margin-top:20px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+.col2{grid-column:span 2}
+.cartao{background:var(--cartao);border:1px solid var(--borda);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.cartao.destaque{border-color:color-mix(in srgb,var(--ouro) 55%,var(--borda))}
+.cab{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.cab h2{margin:0;font-family:Cinzel,serif;font-size:13px;letter-spacing:2px;color:var(--ouroTexto);font-weight:600}
+.cab .mudo{font-size:12px;color:var(--mudo)}
+.cab a{font-size:13px;text-decoration:none}
+.titulo-grande{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;line-height:1.1;margin:0}
+.sub{font-size:14px;color:var(--mudo)}
+.linha{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--cartao2)}
+.linha .rot{font-size:13px;font-weight:600;color:var(--ouroTexto)}
+.linha .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.linha .txt b{font-weight:500;font-size:15px}
+.linha .txt span{font-size:13px;color:var(--mudo)}
+.selo{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.s-pronto{background:var(--ok-bg);color:var(--ok-fg)} .s-rascunho{background:var(--meio-bg);color:var(--meio-fg)} .s-planejado{background:var(--novo-bg);color:var(--novo-fg)}
+.botoes{display:flex;flex-wrap:wrap;gap:8px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--borda);background:transparent;color:var(--texto);font-size:14px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn.ouro{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
+.btn.peq{min-height:36px;padding:0 12px;font-size:13px}
+.chave-livre{display:flex;gap:8px}
+.chave-livre input{flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao2);color:var(--texto);padding:0 14px;font-size:15px}
+.chave-livre input:focus{outline:2px solid var(--ouro);border-color:var(--ouro)}
+.agenda-item{display:flex;gap:12px;align-items:flex-start;padding:8px 10px;border-radius:10px}
+.agenda-item.agora{background:var(--cartao2)}
+.agenda-item .hora{width:46px;flex:none;font-size:13px;font-weight:600;color:var(--ouroTexto);padding-top:1px}
+.agenda-item .o{display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.35;min-width:0}
+.agenda-item .o small{font-size:12px;color:var(--mudo)}
+.agenda-item.feito .o{text-decoration:line-through;opacity:.55}
+.grupo-rot{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--mudo);margin-top:4px}
+.grupo-rot.atraso{color:var(--perigo)}
+.mural{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.mural h3{margin:0 0 8px;font-size:13px;color:var(--mudo);font-weight:600}
+.postits{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.postit{border-radius:6px;padding:10px 12px;color:#2A2205;display:flex;flex-direction:column;gap:6px;min-height:78px;box-shadow:0 2px 6px rgba(0,0,0,.18);font-size:13px;line-height:1.35}
+.postit b{font-weight:600;font-size:14px}
+.postit small{font-size:11px;font-weight:600;color:#5C4A0C;margin-top:auto}
+.postit.feito{opacity:.5;text-decoration:line-through}
+.c-amarelo{background:#F3E39A}.c-azul{background:#BFD9F2}.c-rosa{background:#F4C6D3}.c-lilas{background:#D9CCF0}.c-verde{background:#C9E8C4}.c-laranja{background:#F6CFA4}
+.sug{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45}
+.sug svg{flex:none;margin-top:2px}
+.vazio{font-size:14px;color:var(--mudo);line-height:1.5}
+.erro{font-size:13px;color:var(--perigo)}
+.dev-tit{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;line-height:1.15;margin:0}
+nav.comodos{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--cartao);border-top:1px solid var(--borda);padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 8px);display:flex;justify-content:center;gap:4px;overflow-x:auto}
+nav.comodos button{min-height:48px;padding:0 14px;border-radius:12px;border:none;background:transparent;color:var(--texto);font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;white-space:nowrap}
+nav.comodos button:hover{background:var(--cartao2)}
+nav.comodos svg{color:var(--ouro)}
+/* painéis laterais */
+.painel-fundo{position:fixed;inset:0;z-index:50;background:rgba(5,10,20,.55);display:none;justify-content:flex-end}
+.painel-fundo.aberto{display:flex}
+.painel{width:min(680px,100%);height:100%;background:var(--fundo);border-left:1px solid var(--borda);display:flex;flex-direction:column}
+.painel .topo{padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 14px;border-bottom:1px solid var(--borda);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.painel .topo h3{margin:0;font-family:'Cormorant Garamond',serif;font-size:28px;line-height:1.1}
+.painel .meta{margin-top:6px;font-size:14px;color:var(--mudo)}
+.painel .corpo{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:18px 22px calc(env(safe-area-inset-bottom,0px) + 30px);font-size:17px;line-height:1.65}
+.painel .corpo.texto{white-space:pre-wrap}
+.lista-apps{display:flex;flex-direction:column;gap:18px}
+.lista-apps h4{margin:0 0 8px;font-family:Cinzel,serif;font-size:13px;letter-spacing:2px;color:var(--ouroTexto)}
+.lista-apps .apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.lista-apps a{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);text-decoration:none;color:var(--texto);font-size:15px;font-weight:500}
+.lista-apps a small{color:var(--mudo);font-size:12px;font-weight:400}
+.lista-apps a:hover{border-color:var(--ouro)}
+@media (max-width:980px){ .grade{grid-template-columns:repeat(2,minmax(0,1fr))} .col2{grid-column:span 2} }
+@media (max-width:680px){ .grade{grid-template-columns:1fr} .col2{grid-column:auto} .mural{grid-template-columns:1fr} .linha{grid-template-columns:1fr} .linha .botoes{justify-content:flex-start!important} .marca h1{font-size:28px} nav.comodos{justify-content:flex-start} }
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div class="marca">
-      <small>CANIVETE</small>
-      <h1>Memória</h1>
-      <p>Digite uma chave e veja o que você já fez com ela</p>
+      <img src="icon-192.png" alt="">
+      <div>
+        <small>CANIVETE</small>
+        <h1 id="saudacao">Bom dia, Bispo</h1>
+        <p id="dataLonga"></p>
+      </div>
     </div>
     <div class="acoes">
+      <div class="pilula" id="dolar" aria-live="polite"><span class="mudo">Dólar</span><span>…</span></div>
       <span class="versao" id="versao"></span>
       <button class="icone" id="bTema" type="button" aria-label="Alternar modo claro e escuro"></button>
       <button class="icone" id="bAtualizar" type="button" aria-label="Atualizar app">
@@ -106,63 +133,149 @@ mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
     </div>
   </header>
 
-  <form class="busca" id="fBusca" role="search">
-    <label for="q" class="sr" style="position:absolute;left:-9999px">Chave</label>
-    <input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="Romanos 8, Rm 8:28, batismo, santidade…">
-    <button class="btn" type="submit">Buscar</button>
-  </form>
-  <div class="dicas" id="dicas"></div>
+  <div id="alertaBackup"></div>
 
-  <div id="saida"></div>
+  <main class="grade">
+    <section class="cartao destaque col2" id="cChave" aria-labelledby="hChave">
+      <div class="cab"><h2 id="hChave">CHAVE DO DIA</h2><span class="mudo" id="rotina"></span></div>
+      <div id="chaveCorpo"><div class="vazio">Carregando o calendário do KTL…</div></div>
+      <form class="chave-livre" id="fChave" role="search">
+        <label for="qChave" style="position:absolute;left:-9999px">Outra chave</label>
+        <input id="qChave" type="search" enterkeyhint="search" autocomplete="off" placeholder="Outra chave: texto ou tema (ex.: Ceia do Senhor, Jo 15)">
+        <button class="btn ouro" type="submit">Abrir na Memória</button>
+      </form>
+    </section>
 
-  <div class="rodape-app">Memória · Canivete do Bispo · <span id="versao2"></span></div>
+    <section class="cartao" aria-labelledby="hAgenda" style="grid-row:span 2">
+      <div class="cab"><h2 id="hAgenda">AGENDA</h2><a href="https://eneas-ena.github.io/UNI/" target="_blank" rel="noopener">Abrir UNI ›</a></div>
+      <div id="agendaCorpo"><div class="vazio">Carregando…</div></div>
+    </section>
+
+    <section class="cartao col2" aria-labelledby="hMural">
+      <div class="cab"><h2 id="hMural">MURAL</h2><a href="https://eneas-ena.github.io/vida_plena/" target="_blank" rel="noopener">Abrir Vida Plena ›</a></div>
+      <div id="muralCorpo"><div class="vazio">Carregando…</div></div>
+    </section>
+
+    <section class="cartao" aria-labelledby="hDev">
+      <div class="cab"><h2 id="hDev">DEVOCIONAL</h2><span class="mudo">Vida Plena</span></div>
+      <div id="devCorpo"><div class="vazio">Carregando…</div></div>
+    </section>
+
+    <section class="cartao col2" aria-labelledby="hSug">
+      <div class="cab"><h2 id="hSug">SUGESTÕES DA IA</h2><span class="mudo">conhecem a sua semana</span></div>
+      <div id="sugCorpo"></div>
+    </section>
+  </main>
 </div>
 
-<div id="leitor" aria-hidden="true">
-  <div class="painel" role="dialog" aria-modal="true" aria-labelledby="lTitulo">
+<nav class="comodos" aria-label="Cômodos">
+  <button type="button" data-ir="memoria"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="M11 11l9 9M16 16l2-2M18.5 18.5l2-2"/></svg>Memória</button>
+  <button type="button" data-comodo="Palavra"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2zM4 5v16M8 7h6"/></svg>Palavra</button>
+  <button type="button" data-comodo="Púlpito"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg>Púlpito</button>
+  <button type="button" data-comodo="Rebanho"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"/></svg>Rebanho</button>
+  <button type="button" data-comodo="Formação"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5"/></svg>Formação</button>
+  <button type="button" data-comodo="Mesa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Mesa</button>
+</nav>
+
+<div class="painel-fundo" id="painel" aria-hidden="true">
+  <div class="painel" role="dialog" aria-modal="true" aria-labelledby="pTitulo">
     <div class="topo">
-      <div>
-        <h3 id="lTitulo"></h3>
-        <div class="meta" id="lMeta"></div>
-      </div>
-      <button class="icone" id="lFechar" type="button" aria-label="Fechar">
+      <div><h3 id="pTitulo"></h3><div class="meta" id="pMeta"></div></div>
+      <button class="icone" id="pFechar" type="button" aria-label="Fechar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div id="lNav">
-      <button class="navbtn" id="lAnt" type="button">‹ Anterior</button>
-      <div class="meio" id="lPos"></div>
-      <button class="navbtn" id="lProx" type="button">Próxima ›</button>
-    </div>
-    <div class="corpo" id="lCorpo"></div>
+    <div class="corpo" id="pCorpo"></div>
   </div>
 </div>
 
 <script>
 /* =====================================================================
-   MEMÓRIA — Canivete do Bispo
-   · Busca no acervo do KTL por texto bíblico ("Romanos 8") ou palavra ("batismo").
-   · Usa as funções memoria_buscar e memoria_documento do Supabase
-     (arquivos memoria_etapa1.sql e memoria_etapa1b.sql).
-   · Login: porteiro.js (o mesmo dos outros apps pessoais).
+   CANIVETE — Tela Hoje
+   Junta numa tela só: a chave do dia (calendário do KTL), a agenda (UNI),
+   o mural e o devocional (Vida Plena), o dólar e sugestões da IA.
+   Só lê os outros apps: para editar, os botões abrem o app de origem.
+   Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.2.0';
+const VERSAO = '0.3.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
+const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
+const KTL_URL = 'https://ktl-bispo.eneaspr.workers.dev/';
+
+const COMODOS = {
+  'Palavra': [
+    ['InterTextus', 'Bíblia interlinear', 'https://eneas-ena.github.io/interlinear/'],
+    ['Anagnosis', 'Grego e hebraico', 'https://eneas-ena.github.io/anagnosis/'],
+    ['Teólogo de Bolso PRO', 'Pesquisa bíblica', 'https://eneas-ena.github.io/teologia-de-bolso/'],
+    ['Atlas das Profecias', 'Cartões de profecias', 'https://eneas-ena.github.io/atlas-profecias/'],
+    ['Leitura da Bíblia', 'Trilhas de leitura', 'https://eneas-ena.github.io/leitura_biblia/']
+  ],
+  'Púlpito': [
+    ['KTL', 'Escrever sermões e calendário', KTL_URL],
+    ['Pregador', 'No púlpito (iPad)', 'https://eneas-ena.github.io/pregador-visual/'],
+    ['Scriba', 'Transcrever pregações', 'https://eneas-ena.github.io/scriba/'],
+    ['NaCena', 'Teleprompter', 'https://eneas-ena.github.io/nacena/'],
+    ['Gerador de slides', 'Slides dos sermões', 'https://eneas-ena.github.io/gerador-slides/']
+  ],
+  'Rebanho': [
+    ['Receber', 'Visitantes e decisões', 'https://eneas-ena.github.io/receber/'],
+    ['Estudos de Células', 'Estudos semanais', 'https://igreja-vidas.github.io/estudos-celulas/'],
+    ['Devocional Bíblico', 'Devocional da igreja', 'https://eneas-ena.github.io/devocional-vidas/']
+  ],
+  'Formação': [
+    ['MENTOR · Currículo', 'Apostilas das disciplinas', 'https://igreja-vidas.github.io/mentor-curriculo/'],
+    ['Rede de Crianças', 'Material do infantil', 'https://eneas-ena.github.io/curriculo/'],
+    ['Teologia em Minutos', 'Perguntas de teologia', 'https://eneas-ena.github.io/teologia-em-minutos/']
+  ],
+  'Mesa': [
+    ['UNI', 'Agenda e tarefas', 'https://eneas-ena.github.io/UNI/'],
+    ['Vida Plena', 'Mural, devocional e backup', 'https://eneas-ena.github.io/vida_plena/'],
+    ['Pergaminho', 'Caderno digital', 'https://eneas-ena.github.io/pergaminho/'],
+    ['PromptFlow', 'Construtor de prompts', 'https://eneas-ena.github.io/PromptFlow/']
+  ]
+};
+
+/* Rotina da semana (para a linha do dia e para a IA) */
+const ROTINA = {
+  0: 'Domingo: três pregações',
+  1: 'Segunda: curso MENTOR',
+  2: 'Terça: faculdade à noite',
+  3: 'Quarta: Estudos das Células · culto de oração à noite',
+  4: 'Quinta: preparo dos sermões · faculdade à noite',
+  5: 'Sexta: preparo dos sermões',
+  6: 'Sábado: culto especial (às vezes prego)'
+};
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const lerLS = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
 const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-const semAcento = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 
-const NOMES_TIPO = { sermao: 'Sermão', estudo: 'Estudo', aula: 'Aula', palestra: 'Palestra' };
-const PLURAL_TIPO = { sermao: 'sermões', estudo: 'estudos', aula: 'aulas', palestra: 'palestras' };
-const ROTULO_FILTRO = { sermao: 'Sermões', estudo: 'Estudos', aula: 'Aulas', palestra: 'Palestras' };
+/* ---------- datas (texto AAAA-MM-DD, no fuso do aparelho) ---------- */
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = s => new Date(s + 'T00:00:00Z');
+const addDias = (s, n) => { const d = parse(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const diffDias = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+const dow = s => parse(s).getUTCDay();
+const HOJE = iso(new Date());
+const AMANHA = addDias(HOJE, 1);
+function dataLonga(s){ const d = parse(s); return `${DIAS[d.getUTCDay()]}, ${d.getUTCDate()} de ${MESES[d.getUTCMonth()]}`; }
+function dataCurta(s){ const d = parse(s); return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]}`; }
+const hhmm = t => t ? String(t).slice(0, 5) : '';
 
-/* ---------- versão, tema e atualizar ---------- */
+/* ---------- cabeçalho, tema, versão ---------- */
 $('#versao').textContent = 'v' + VERSAO;
-$('#versao2').textContent = 'v' + VERSAO;
+(function(){
+  const h = new Date().getHours();
+  $('#saudacao').textContent = (h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite') + ', Bispo';
+  const t = dataLonga(HOJE);
+  $('#dataLonga').textContent = t.charAt(0).toUpperCase() + t.slice(1);
+  $('#rotina').textContent = ROTINA[dow(HOJE)];
+})();
 const SOL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
 const LUA = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
 function aplicarTema(t){
@@ -175,7 +288,7 @@ aplicarTema(lerLS('canivete.tema', 'escuro'));
 $('#bTema').onclick = () => aplicarTema(document.documentElement.dataset.tema === 'claro' ? 'escuro' : 'claro');
 $('#bAtualizar').onclick = () => { if (window.porteiroAtualizar) window.porteiroAtualizar(); else location.reload(); };
 
-/* ---------- conexão com o Supabase (mesmo login dos outros apps) ---------- */
+/* ---------- conexão (mesmo login dos outros apps) ---------- */
 let sb = null;
 function cliente(){
   if (sb) return sb;
@@ -183,251 +296,366 @@ function cliente(){
   sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { storageKey: 'bispo-auth', persistSession: true, autoRefreshToken: true } });
   return sb;
 }
-function esperarCliente(ms = 8000){
-  return new Promise(ok => {
-    const t0 = Date.now();
-    (function tentar(){ const c = cliente(); if (c || Date.now() - t0 > ms) ok(c); else setTimeout(tentar, 120); })();
-  });
+function esperarCliente(ms = 10000){
+  return new Promise(ok => { const t0 = Date.now();
+    (function tentar(){ const c = cliente(); if (c || Date.now() - t0 > ms) ok(c); else setTimeout(tentar, 120); })(); });
 }
-
-/* ---------- buscas recentes e sugestões ---------- */
-const SUGESTOES = ['Romanos 8', 'batismo', 'Salmo 23', 'santidade', 'Ceia do Senhor'];
-function pintarDicas(){
-  const rec = lerLS('memoria.recentes', []);
-  const lista = rec.length ? rec : SUGESTOES;
-  $('#dicas').innerHTML = `<span>${rec.length ? 'Recentes:' : 'Experimente:'}</span>` +
-    lista.map(t => `<button class="chip" type="button" data-q="${esc(t)}">${esc(t)}</button>`).join('');
-  $('#dicas').querySelectorAll('[data-q]').forEach(b => b.onclick = () => { $('#q').value = b.dataset.q; buscar(b.dataset.q); });
-}
-function lembrar(q){
-  const rec = lerLS('memoria.recentes', []).filter(t => semAcento(t) !== semAcento(q));
-  rec.unshift(q); gravarLS('memoria.recentes', rec.slice(0, 8)); pintarDicas();
-}
-pintarDicas();
-
-/* ---------- busca ---------- */
-let ultimo = { q: '', linhas: [], filtro: 'todos' };
-
-async function buscar(q){
-  q = (q || '').trim();
-  if (!q) return;
-  const saida = $('#saida');
-  saida.innerHTML = '<div class="carregando">Procurando na memória…</div>';
+async function esperarLogin(){
   const c = await esperarCliente();
-  if (!c){ saida.innerHTML = '<div class="erro">Sem conexão com o banco. Confira a internet e tente de novo.</div>'; return; }
-  const { data, error } = await c.rpc('memoria_buscar', { q, limite: 300 });
-  if (error){
-    const m = error.message || '';
-    saida.innerHTML = /memoria_buscar|function/i.test(m)
-      ? '<div class="erro">Falta rodar no Supabase o arquivo <b>memoria_etapa1b.sql</b>.</div>'
-      : /jwt|auth|permission|denied/i.test(m)
-        ? '<div class="erro">É preciso entrar com o seu login. Toque em atualizar ou abra o app de novo.</div>'
-        : `<div class="erro">Não consegui buscar agora: ${esc(m)}</div>`;
+  if (!c) return null;
+  const s = await c.auth.getSession();
+  if (s.data && s.data.session) return c;
+  await new Promise(ok => window.addEventListener('porteiro:entrou', ok, { once: true }));
+  return c;
+}
+const memoriaLink = q => 'memoria.html?q=' + encodeURIComponent(q);
+
+/* =====================================================================
+   1. CHAVE DO DIA — calendário de pregação do KTL + estudos da semana
+   ===================================================================== */
+const ROT_SIT = { pronto: 'Pronto', rascunho: 'Rascunho', planejado: 'Planejado' };
+let contexto = { domingo: [], estudos: [], agenda: [], mural: [], dev: null };
+
+async function carregarChave(c){
+  const [rd, re] = await Promise.all([
+    c.rpc('canivete_domingo', { p_hoje: HOJE }),
+    c.rpc('canivete_estudos', { p_hoje: HOJE })
+  ]);
+  if (rd.error && /canivete_domingo|function/i.test(rd.error.message || '')){
+    $('#chaveCorpo').innerHTML = '<div class="erro">Falta rodar no Supabase o arquivo <b>canivete_hoje.sql</b>.</div>';
     return;
   }
-  lembrar(q);
-  try { history.replaceState(null, '', '?q=' + encodeURIComponent(q)); } catch {}
-  ultimo = { q, linhas: data || [], filtro: 'todos' };
-  pintar();
+  const dom = (rd.data || []);
+  const est = (re.data || []);
+  contexto.domingo = dom; contexto.estudos = est;
+  const blocoDom = htmlDomingo(dom, rd.error);
+  const blocoEst = htmlEstudos(est);
+  // na quarta (dia das células) os estudos vêm primeiro
+  $('#chaveCorpo').innerHTML = dow(HOJE) === 3 ? blocoEst + blocoDom : blocoDom + blocoEst;
 }
 
-function chaveTitulo(t){ return semAcento(t).replace(/[^a-z0-9]+/g, ' ').trim(); }
-function ano(l){ const m = String(l.quando || '').match(/(\d{4})$/); return m ? +m[1] : null; }
+function proximoDomingo(){ const d = dow(HOJE); return addDias(HOJE, (7 - d) % 7); }
 
-function pintar(){
-  const { q, linhas, filtro } = ultimo;
-  const saida = $('#saida');
-  if (!linhas.length){
-    saida.innerHTML = `<div class="vazio">Nada encontrado para <b>${esc(q)}</b>.<br>Tente outra forma de escrever (por exemplo "Rm 8" ou só o livro e o capítulo), ou uma palavra mais simples.</div>`;
-    return;
+function htmlDomingo(rows, erro){
+  if (erro) return `<div class="erro">Não consegui ler o calendário: ${esc(erro.message)}</div>`;
+  const dia = rows[0] ? rows[0].domingo : proximoDomingo();
+  const quando = dia === HOJE ? 'Hoje' : dia === AMANHA ? 'Amanhã' : `Domingo, ${dataCurta(dia)}`;
+  const sermoes = rows.filter(r => r.culto);
+  if (!sermoes.length){
+    return `<div><p class="titulo-grande">${esc(quando)}</p>
+      <div class="vazio" style="margin-top:6px">Nenhum sermão planejado ainda no Calendário do KTL para este domingo.
+      Use o campo abaixo para escolher uma chave, ou planeje no KTL.</div>
+      <div class="botoes" style="margin-top:10px"><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir o calendário no KTL</a></div></div>`;
   }
-  // repetidos: mesmo título mais de uma vez
-  const contaTitulo = {};
-  linhas.forEach(l => { const k = chaveTitulo(l.titulo); contaTitulo[k] = (contaTitulo[k] || 0) + 1; });
+  const r0 = rows[0];
+  const textos = [...new Set(sermoes.map(s => s.texto).filter(Boolean))];
+  const titulo = textos.length === 1 ? textos[0] : (temLivroComum(textos) || 'Sermões de domingo');
+  const extras = [r0.tema_mes && ('Tema do mês: ' + r0.tema_mes), r0.enfase && r0.enfase !== 'Tema livre' && ('Ênfase: ' + r0.enfase)].filter(Boolean).join(' · ');
+  return `<div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="sub">${esc(quando)} · ${sermoes.length} ${sermoes.length === 1 ? 'culto' : 'cultos'}</div>
+      <p class="titulo-grande">${esc(titulo)}</p>${extras ? `<div class="sub">${esc(extras)}</div>` : ''}</div>
+    ${sermoes.map(s => `<div class="linha">
+      <span class="rot">Culto ${s.culto}</span>
+      <span class="txt"><b>${esc(s.tema || '(sem tema)')}</b><span>${esc(s.texto || '')}</span></span>
+      <span class="botoes" style="justify-content:flex-end;align-items:center">
+        <span class="selo s-${esc(s.situacao)}">${esc(ROT_SIT[s.situacao] || s.situacao || '')}</span>
+        ${s.texto ? `<a class="btn peq" href="${memoriaLink(s.texto)}">O que já fiz</a>` : ''}
+      </span></div>`).join('')}
+    <div class="botoes"><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir no KTL</a></div>
+  </div>`;
+}
+/* "Romanos 8:1-11", "Romanos 8:18-30" → "Romanos 8" */
+function temLivroComum(textos){
+  const caps = textos.map(t => (String(t).match(/^(.*?\d+)\s*[:.]/) || [])[1]).filter(Boolean);
+  return caps.length === textos.length && new Set(caps).size === 1 ? caps[0] : '';
+}
 
-  // resumo
-  const porTipo = {};
-  linhas.forEach(l => { porTipo[l.tipo] = (porTipo[l.tipo] || 0) + 1; });
-  const anos = linhas.map(ano).filter(Boolean);
-  const periodo = anos.length ? (Math.min(...anos) === Math.max(...anos) ? `em ${anos[0]}` : `de ${Math.min(...anos)} a ${Math.max(...anos)}`) : '';
-  const partes = Object.keys(porTipo).sort((a, b) => porTipo[b] - porTipo[a]).map(t => `${porTipo[t]} ${porTipo[t] === 1 ? (NOMES_TIPO[t] || t).toLowerCase() : (PLURAL_TIPO[t] || t)}`);
-  const porTexto = linhas[0].motivo === 'texto';
-  const repetidos = Object.values(contaTitulo).filter(n => n > 1).length;
+function htmlEstudos(rows){
+  if (!rows.length) return '';
+  return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+    <div class="grupo-rot">ESTUDOS DE CÉLULA DA SEMANA</div>
+    ${rows.map(e => `<div class="linha">
+      <span class="rot">${esc(dataCurta(e.data))}</span>
+      <span class="txt"><b>${esc(e.titulo || '(sem título)')}</b><span>${esc([e.referencia, e.tema].filter(Boolean).join(' · '))}</span></span>
+      ${e.referencia ? `<a class="btn peq" href="${memoriaLink(e.referencia)}">O que já fiz</a>` : '<span></span>'}
+    </div>`).join('')}
+  </div>`;
+}
 
-  let html = `<div class="resumo">${linhas.length} ${linhas.length === 1 ? 'resultado' : 'resultados'} para “${esc(q)}”
-    <small>${partes.join(', ')} ${periodo ? '· ' + periodo : ''}${repetidos ? ` · ${repetidos} ${repetidos === 1 ? 'título repetido' : 'títulos repetidos'}` : ''}${linhas.length >= 300 ? ' · mostrando os 300 primeiros' : ''}</small></div>`;
+$('#fChave').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = $('#qChave').value.trim();
+  if (q) location.href = memoriaLink(q);
+});
 
-  // filtros por tipo
-  const tipos = Object.keys(porTipo);
-  if (tipos.length > 1){
-    html += '<div class="filtros">' +
-      [['todos', `Todos (${linhas.length})`], ...tipos.map(t => [t, `${porTipo[t] > 1 ? (ROTULO_FILTRO[t] || t) : (NOMES_TIPO[t] || t)} (${porTipo[t]})`])]
-        .map(([v, r]) => `<button class="chip ${filtro === v ? 'ativo' : ''}" type="button" data-f="${esc(v)}">${esc(r)}</button>`).join('') +
-      '</div>';
+/* =====================================================================
+   2. AGENDA — compromissos e tarefas do UNI
+   ===================================================================== */
+function ocorreUNI(e, d){
+  if (e.date === d) return true;
+  if (!e.recur || !e.date || d < e.date) return false;
+  const diff = diffDias(e.date, d);
+  switch (e.recur){
+    case 'daily': return true;
+    case 'weekly': return diff % 7 === 0;
+    case 'biweekly': return diff % 14 === 0;
+    case 'monthly': return e.date.slice(8) === d.slice(8);
+    case 'yearly': return e.date.slice(5) === d.slice(5);
+    default: return false;
   }
+}
+async function carregarAgenda(c){
+  const [re, rt] = await Promise.all([c.from('events').select('*'), c.from('tasks').select('*')]);
+  if (re.error && rt.error){ $('#agendaCorpo').innerHTML = `<div class="erro">Não consegui ler o UNI: ${esc(re.error.message)}</div>`; return; }
+  const evs = (re.data || []).filter(e => ocorreUNI(e, HOJE)).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+  const tasks = rt.data || [];
+  const tHoje = tasks.filter(t => (t.date || HOJE) === HOJE).sort((a, b) => (!!a.done - !!b.done) || (a.time || '99').localeCompare(b.time || '99'));
+  const tAtraso = tasks.filter(t => t.date && t.date < HOJE && !t.done).sort((a, b) => a.date.localeCompare(b.date));
+  contexto.agenda = evs.map(e => (e.time ? hhmm(e.time) + ' ' : '') + e.title)
+    .concat(tHoje.filter(t => !t.done).map(t => 'Tarefa: ' + t.title))
+    .concat(tAtraso.map(t => 'Tarefa atrasada: ' + t.title));
 
-  const visiveis = linhas.filter(l => filtro === 'todos' || l.tipo === filtro);
-  let grupos;
-  if (porTexto){
-    grupos = [['Sobre este texto', visiveis]];
+  const agora = new Date(), hAgora = pad(agora.getHours()) + ':' + pad(agora.getMinutes());
+  let proxima = evs.findIndex(e => e.time && hhmm(e.time) >= hAgora);
+  let html = '';
+  html += '<div class="grupo-rot">COMPROMISSOS</div>';
+  html += evs.length ? evs.map((e, i) => `<div class="agenda-item${i === proxima ? ' agora' : ''}">
+      <span class="hora">${esc(hhmm(e.time) || '—')}</span>
+      <span class="o"><span>${esc(e.title)}</span>${e.note ? `<small>${esc(e.note)}</small>` : ''}</span></div>`).join('')
+    : '<div class="vazio">Nenhum compromisso hoje.</div>';
+  html += '<div class="grupo-rot" style="margin-top:10px">TAREFAS</div>';
+  if (tAtraso.length){
+    html += `<div class="grupo-rot atraso">ATRASADAS · ${tAtraso.length}</div>` + tAtraso.slice(0, 5).map(t => `<div class="agenda-item">
+      <span class="hora">${esc(dataCurta(t.date).replace(/ de .*$/, '/' + t.date.slice(5, 7)))}</span><span class="o"><span>${esc(t.title)}</span></span></div>`).join('');
+    if (tAtraso.length > 5) html += `<div class="vazio">e mais ${tAtraso.length - 5} no UNI.</div>`;
+  }
+  html += tHoje.length ? tHoje.map(t => `<div class="agenda-item${t.done ? ' feito' : ''}">
+      <span class="hora">${esc(hhmm(t.time) || '·')}</span><span class="o"><span>${esc(t.title)}</span></span></div>`).join('')
+    : '<div class="vazio">Nenhuma tarefa para hoje.</div>';
+  $('#agendaCorpo').innerHTML = html;
+}
+
+/* =====================================================================
+   3. MURAL e DEVOCIONAL — do Vida Plena (mesmas regras de repetição dele)
+   ===================================================================== */
+function regraNaData(r, ini, d){
+  const dd = diffDias(ini, d); if (dd < 0) return false;
+  const dias = (r.dias_semana && r.dias_semana.length) ? r.dias_semana.map(Number) : null;
+  switch (r.recorrencia){
+    case 'diaria': return dias ? dias.includes(dow(d)) : true;
+    case 'semanal': return (dias || [dow(ini)]).includes(dow(d));
+    case 'quinzenal': if (!(dias || [dow(ini)]).includes(dow(d))) return false;
+      return Math.floor(diffDias(addDias(ini, -dow(ini)), d) / 7) % 2 === 0;
+    case 'mensal': return ini.slice(8) === d.slice(8);
+    case 'anual': return ini.slice(5) === d.slice(5);
+    case 'intervalo': { const n = Math.max(1, +r.intervalo || 1), u = r.intervalo_unidade || 'dias';
+      if (u === 'dias') return dd % n === 0;
+      if (u === 'semanas') return dd % (7 * n) === 0;
+      if (u === 'meses'){ const a = parse(ini), x = parse(d); const m = (x.getUTCFullYear() - a.getUTCFullYear()) * 12 + x.getUTCMonth() - a.getUTCMonth(); return m % n === 0 && ini.slice(8) === d.slice(8); }
+      return false; }
+  }
+  return false;
+}
+function ocorreNaData(t, d){
+  if (t.tipo !== 'recorrente') return t.data === d;
+  const ini = t.rec_inicio || t.data; if (!ini || d < ini) return false;
+  if (t.rec_fim && d > t.rec_fim) return false;
+  if (t.excecoes && t.excecoes.includes(d)) return false;
+  return regraNaData(t, ini, d);
+}
+const OCULTAS = ['cancelada', 'dispensada'];
+function itensDoDia(tarefas, ocorr, d){
+  const om = {}; ocorr.forEach(o => { om[o.tarefa_id + '|' + o.data] = o; });
+  const out = [];
+  for (const t of tarefas){
+    if (t.tipo !== 'recorrente'){
+      if (t.data !== d || OCULTAS.includes(t.situacao)) continue;
+      out.push({ t, feito: t.situacao === 'concluida' });
+    } else if (ocorreNaData(t, d)){
+      const o = om[t.id + '|' + d];
+      if (o && o.nova_data && o.nova_data !== d) continue;
+      if (o && OCULTAS.includes(o.situacao)) continue;
+      out.push({ t, feito: !!(o && o.situacao === 'concluida') });
+    }
+  }
+  for (const o of ocorr){
+    if (o.nova_data === d && o.data !== d){
+      const t = tarefas.find(x => x.id === o.tarefa_id);
+      if (t && !OCULTAS.includes(o.situacao)) out.push({ t, feito: o.situacao === 'concluida' });
+    }
+  }
+  const pr = { alta: 0, media: 1, baixa: 2 };
+  return out.sort((a, b) => (!!b.t.fixada - !!a.t.fixada) || (a.t.hora_inicio || '99').localeCompare(b.t.hora_inicio || '99') || ((pr[a.t.prioridade] ?? 1) - (pr[b.t.prioridade] ?? 1)));
+}
+function eventoNaData(e, d){
+  if (e.excecoes && e.excecoes.includes(d)) return false;
+  if (!e.recorrencia) return e.data === d;
+  if (d < e.data || (e.rec_fim && d > e.rec_fim)) return false;
+  return regraNaData(e, e.data, d);
+}
+const COR_EVENTO = { culto: 'rosa', celula: 'verde', reuniao: 'amarelo', formacao: 'lilas', especial: 'laranja', visita: 'azul', pessoal: 'azul' };
+function horario(x){ return x.hora_inicio ? hhmm(x.hora_inicio) + (x.hora_fim ? '–' + hhmm(x.hora_fim) : '') : 'Durante o dia'; }
+
+async function carregarVidaPlena(c){
+  const vp = c.schema('vidaplena');
+  const [rt, ro, rev, rdv, rbk] = await Promise.all([
+    vp.from('tarefas').select('*').limit(5000),
+    vp.from('tarefa_ocorrencias').select('*').gte('data', addDias(HOJE, -120)).limit(5000),
+    vp.from('eventos').select('*').limit(5000),
+    vp.from('devocionais').select('data,titulo,referencia,texto_biblico,reflexao').eq('data', HOJE).maybeSingle(),
+    vp.from('backup_execucoes').select('status,inicio,fim,tarefa_nome,mensagem').order('inicio', { ascending: false }).limit(5)
+  ]);
+  pintarMural(rt, ro, rev);
+  pintarDevocional(rdv);
+  pintarBackup(rbk);
+}
+
+function pintarMural(rt, ro, rev){
+  if (rt.error){ $('#muralCorpo').innerHTML = `<div class="erro">Não consegui ler o Vida Plena: ${esc(rt.error.message)}</div>`; return; }
+  const tarefas = rt.data || [], ocorr = ro.data || [], eventos = rev.data || [];
+  const dia = d => {
+    const its = itensDoDia(tarefas, ocorr, d).map(i => ({ titulo: i.t.titulo, cor: i.t.cor || 'amarelo', rodape: horario(i.t), feito: i.feito, alta: i.t.prioridade === 'alta', h: i.t.hora_inicio || '99' }));
+    const evs = eventos.filter(e => e.no_mural !== false && eventoNaData(e, d)).map(e => ({ titulo: e.titulo, cor: COR_EVENTO[e.tipo] || 'azul', rodape: 'Agenda · ' + horario(e), feito: false, h: e.hora_inicio || '99' }));
+    return evs.concat(its).sort((a, b) => (!!a.feito - !!b.feito) || String(a.h).localeCompare(String(b.h)));
+  };
+  const hoje = dia(HOJE), amanha = dia(AMANHA);
+  contexto.mural = hoje.filter(x => !x.feito).map(x => x.titulo);
+  const col = (rot, its) => `<div><h3>${rot} · ${its.length}</h3>${its.length
+    ? `<div class="postits">${its.map(x => `<div class="postit c-${esc(x.cor)}${x.feito ? ' feito' : ''}"><b>${esc(x.titulo)}</b><small>${x.alta && !x.feito ? 'Alta · ' : ''}${esc(x.rodape)}</small></div>`).join('')}</div>`
+    : '<div class="vazio">Nada no mural.</div>'}</div>`;
+  $('#muralCorpo').innerHTML = `<div class="mural">${col('Hoje', hoje)}${col('Amanhã', amanha)}</div>`;
+}
+
+let devocional = null;
+function pintarDevocional(r){
+  if (r.error){ $('#devCorpo').innerHTML = `<div class="erro">Não consegui ler o devocional: ${esc(r.error.message)}</div>`; return; }
+  devocional = r.data;
+  contexto.dev = devocional ? `${devocional.titulo} (${devocional.referencia || ''})` : null;
+  if (!devocional){ $('#devCorpo').innerHTML = '<div class="vazio">Não há devocional cadastrado para hoje.</div>'; return; }
+  $('#devCorpo').innerHTML = `<p class="dev-tit">${esc(devocional.titulo || 'Devocional de hoje')}</p>
+    ${devocional.referencia ? `<div class="sub">${esc(devocional.referencia)}</div>` : ''}
+    <div class="botoes"><button class="btn ouro" type="button" id="bLerDev">Ler agora</button></div>`;
+  $('#bLerDev').onclick = () => abrirPainel(devocional.titulo || 'Devocional', devocional.referencia || '',
+    [devocional.texto_biblico, devocional.reflexao].filter(Boolean).join('\n\n'), true);
+}
+
+function pintarBackup(r){
+  if (r.error || !r.data || !r.data.length) return;
+  const ult = r.data.find(e => e.status !== 'rodando');
+  if (!ult) return;
+  const ruins = { erro: 'falhou', interrompido: 'foi interrompido', pulado: 'não rodou (destino desconectado)', parcial: 'terminou com avisos' };
+  if (!ruins[ult.status]) return;
+  const quando = new Date(ult.fim || ult.inicio).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  $('#alertaBackup').innerHTML = `<div class="alerta" role="alert">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--perigo);flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <span><b>Backup:</b> ${esc(ult.tarefa_nome || 'a última cópia')} ${esc(ruins[ult.status])} em ${esc(quando)}.${ult.mensagem ? ' ' + esc(ult.mensagem) : ''}
+    <a href="https://eneas-ena.github.io/vida_plena/" target="_blank" rel="noopener">Ver no Vida Plena</a></span></div>`;
+}
+
+/* =====================================================================
+   4. DÓLAR — PTAX do Banco Central (guarda por 1 hora)
+   ===================================================================== */
+async function carregarDolar(){
+  const box = $('#dolar');
+  let d = lerLS('canivete.dolar', null);
+  if (!d || Date.now() - d.obtido > 3600e3){
+    try {
+      const r = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados/ultimos/2?formato=json');
+      const j = await r.json();
+      const v = j.map(x => +String(x.valor).replace(',', '.')).filter(x => x > 0);
+      if (v.length){ d = { obtido: Date.now(), venda: v[v.length - 1], ant: v.length > 1 ? v[0] : null, data: j[j.length - 1].data }; gravarLS('canivete.dolar', d); }
+    } catch {}
+  }
+  if (!d){ box.innerHTML = '<span class="mudo">Dólar</span><span>indisponível</span>'; return; }
+  const varp = d.ant ? (d.venda - d.ant) / d.ant * 100 : null;
+  box.innerHTML = `<span class="mudo">Dólar</span><b>R$ ${d.venda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>` +
+    (varp != null ? `<span class="${varp > 0.005 ? 'sobe' : varp < -0.005 ? 'desce' : 'mudo'}" style="font-size:12px;font-weight:600">${varp > 0 ? '+' : ''}${varp.toFixed(2).replace('.', ',')}%</span>` : '') +
+    `<span class="mudo" title="PTAX venda do Banco Central">${esc(d.data || '')}</span>`;
+}
+
+/* =====================================================================
+   5. SUGESTÕES DA IA — só quando o Bispo pede (guarda as do dia)
+   ===================================================================== */
+const ICONE_SUG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>';
+function pintarSugestoes(){
+  const salvas = lerLS('canivete.sug.' + HOJE, null);
+  if (salvas && salvas.length){
+    $('#sugCorpo').innerHTML = salvas.map(s => `<div class="sug">${ICONE_SUG}<span>${esc(s)}</span></div>`).join('') +
+      '<div class="botoes"><button class="btn peq" type="button" id="bSug">Pedir de novo</button></div>';
   } else {
-    grupos = [
-      ['Tratam do assunto', visiveis.filter(l => l.relevancia >= 0.4)],
-      ['Mencionam de passagem', visiveis.filter(l => l.relevancia < 0.4)]
-    ];
+    $('#sugCorpo').innerHTML = '<div class="vazio">A IA olha o seu dia (agenda, mural, sermões de domingo e estudos) e sugere como aproveitá-lo.</div>' +
+      '<div class="botoes"><button class="btn ouro" type="button" id="bSug">Pedir sugestões para hoje</button></div>';
   }
-  // sermões repetidos (mesmo título) viram um cartão só, com as versões dentro
-  cartoes = [];
-  grupos.filter(g => g[1].length).forEach(([nome, ls]) => {
-    const mapa = new Map(), juntos = [];
-    ls.forEach(l => {
-      const k = chaveTitulo(l.titulo);
-      if (!mapa.has(k)){ const g = { itens: [] }; mapa.set(k, g); juntos.push(g); }
-      mapa.get(k).itens.push(l);
-    });
-    html += `<section class="grupo"><h2>${esc(nome.toUpperCase())} <span>· ${juntos.length}</span></h2><div class="lista">` +
-      juntos.map(g => {
-        const i = cartoes.push(g.itens) - 1, l = g.itens[0], n = g.itens.length;
-        const refs = [...new Set(g.itens.map(x => x.referencia).filter(Boolean))];
-        const anosG = g.itens.map(ano).filter(Boolean);
-        const quando = n === 1 ? l.quando : (anosG.length ? (Math.min(...anosG) === Math.max(...anosG) ? String(anosG[0]) : `${Math.min(...anosG)}–${Math.max(...anosG)}`) : '');
-        const lugares = [...new Set(g.itens.map(x => x.lugar).filter(Boolean))];
-        return `<button class="item" type="button" data-c="${i}">
-          <span class="titulo">${esc(l.titulo || '(sem título)')}</span>
-          ${refs.length ? `<span class="ref">${esc(refs.length > 2 ? refs.slice(0, 2).join(' · ') + ` · +${refs.length - 2}` : refs.join(' · '))}</span>` : ''}
-          ${l.tema ? `<span class="tema">${esc(l.tema)}</span>` : ''}
-          <span class="rodape">
-            <span class="selo">${esc(NOMES_TIPO[l.tipo] || l.tipo || '')}</span>
-            ${quando ? `<span class="selo">${esc(quando)}</span>` : ''}
-            ${lugares.length === 1 ? `<span class="selo">${esc(lugares[0])}</span>` : ''}
-            ${n > 1 ? `<span class="selo repetido">${n} versões</span>` : ''}
-          </span></button>`;
-      }).join('') + '</div></section>';
-  });
-  saida.innerHTML = html;
-  saida.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { ultimo.filtro = b.dataset.f; pintar(); });
-  saida.querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
-    const itens = cartoes[+b.dataset.c];
-    if (itens.length === 1) abrir(itens[0].documento); else abrirVersoes(itens);
-  });
+  $('#bSug').onclick = pedirSugestoes;
 }
-let cartoes = [];
-
-/* ---------- leitura de um documento ---------- */
-function textoLimpo(c){
-  c = String(c || '');
-  if (!/<[a-z][\s\S]*>/i.test(c)) return c;
-  const html = c.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, '\n\n').replace(/<li[^>]*>/gi, '• ');
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
-}
-function destacar(textoEscapado, q){
-  const termos = String(q || '').split(/\s+/).filter(t => t.length >= 3 && !/\d/.test(t)).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  if (!termos.length) return textoEscapado;
-  return textoEscapado.replace(new RegExp('(' + termos.join('|') + ')', 'gi'), '<mark>$1</mark>');
-}
-/* Versões de um sermão repetido: lista para escolher qual abrir */
-let versoes = null;   // { lista: [...], letras: {assinatura: 'A'}, contagem: {assinatura: n} } enquanto o leitor mostra versões
-function mostrarLeitor(){ const L = $('#leitor'); L.classList.add('aberto'); L.setAttribute('aria-hidden', 'false'); }
-function milCaracteres(n){ return n >= 1000 ? (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil caracteres' : n + ' caracteres'; }
-
-async function abrirVersoes(itens){
-  mostrarLeitor();
-  $('#lNav').classList.remove('ativo');
-  $('#lTitulo').textContent = itens[0].titulo || '(sem título)';
-  $('#lMeta').textContent = `${itens.length} versões · carregando…`;
-  $('#lCorpo').innerHTML = '';
-  const c = cliente();
-  const { data, error } = c ? await c.rpc('memoria_versoes', { p_ids: itens.map(x => x.documento) }) : { data: null, error: { message: 'sem conexão' } };
-  let lista, aviso = '';
-  if (error || !data || !data.length){
-    // sem a função nova: usa o que a busca já trouxe (sem dizer quais textos são iguais)
-    lista = itens.slice();
-    aviso = /memoria_versoes|function/i.test((error && error.message) || '')
-      ? 'Para ver quais versões têm o texto igual e quais foram mexidas, rode no Supabase o arquivo <b>memoria_etapa1c.sql</b>.'
-      : '';
-  } else lista = data;
-  const contagem = {}, letras = {};
-  lista.forEach(v => { if (v.assinatura){ contagem[v.assinatura] = (contagem[v.assinatura] || 0) + 1; } });
-  let proxima = 0;
-  lista.forEach(v => { if (v.assinatura && !letras[v.assinatura]) letras[v.assinatura] = String.fromCharCode(65 + (proxima++ % 26)); });
-  versoes = { lista, letras, contagem, aviso };
-  pintarVersoes();
-}
-function pintarVersoes(){
-  const { lista, letras, contagem, aviso } = versoes;
-  $('#lNav').classList.remove('ativo');
-  $('#lTitulo').textContent = lista[0].titulo || '(sem título)';
-  const anosV = lista.map(ano).filter(Boolean);
-  const distintos = Object.keys(contagem).length;
-  $('#lMeta').innerHTML = `${lista.length} versões${anosV.length ? ` · ${Math.min(...anosV)}${Math.max(...anosV) !== Math.min(...anosV) ? '–' + Math.max(...anosV) : ''}` : ''}` +
-    (distintos ? `<br>${distintos === 1 ? 'Todas com o <b>mesmo texto</b>' : `<b>${distintos} textos diferentes</b> — a mesma letra indica texto idêntico`}` : '');
-  $('#lCorpo').innerHTML = `<div class="versoes">${aviso ? `<div class="aviso">${aviso}</div>` : ''}` +
-    lista.map((v, i) => {
-      const letra = v.assinatura ? letras[v.assinatura] : '';
-      const iguais = v.assinatura ? contagem[v.assinatura] - 1 : 0;
-      const linha2 = [v.referencia, v.tema].filter(Boolean).map(esc).join(' · ');
-      const linha3 = [
-        v.tamanho != null ? milCaracteres(v.tamanho) : '',
-        letra ? (iguais ? `texto <span class="letra">${letra}</span> igual a ${iguais} ${iguais === 1 ? 'outra' : 'outras'}` : `texto <span class="letra">${letra}</span> único`) : ''
-      ].filter(Boolean).join(' · ');
-      return `<button class="versao-item" type="button" data-v="${i}">
-        <span class="num">${i + 1}</span>
-        <span class="info"><span>${esc([v.quando, v.lugar].filter(Boolean).join(' · ') || 'sem data')}</span>
-        ${linha2 ? `<small>${linha2}</small>` : ''}${linha3 ? `<small>${linha3}</small>` : ''}</span></button>`;
-    }).join('') + '</div>';
-  $('#lCorpo').scrollTop = 0;
-  $('#lCorpo').querySelectorAll('[data-v]').forEach(b => b.onclick = () => abrir(lista[+b.dataset.v].documento, +b.dataset.v));
-}
-function pintarNav(pos){
-  if (!versoes || pos == null){ $('#lNav').classList.remove('ativo'); return; }
-  const n = versoes.lista.length, v = versoes.lista[pos];
-  const letra = v.assinatura ? ` · texto <span class="letra">${versoes.letras[v.assinatura]}</span>` : '';
-  $('#lPos').innerHTML = `<b>Versão ${pos + 1} de ${n}</b>${letra}<br><button class="navbtn" id="lTodas" type="button" style="margin-top:6px">Todas as versões</button>`;
-  $('#lAnt').disabled = pos === 0;
-  $('#lProx').disabled = pos === n - 1;
-  $('#lAnt').onclick = () => abrir(versoes.lista[pos - 1].documento, pos - 1);
-  $('#lProx').onclick = () => abrir(versoes.lista[pos + 1].documento, pos + 1);
-  $('#lTodas').onclick = pintarVersoes;
-  $('#lNav').classList.add('ativo');
+async function pedirSugestoes(){
+  $('#sugCorpo').innerHTML = '<div class="vazio">Pensando no seu dia…</div>';
+  const sermoes = contexto.domingo.filter(s => s.culto).map(s => `Culto ${s.culto}: "${s.tema}" (${s.texto || 'sem texto'}) — ${ROT_SIT[s.situacao] || s.situacao}`);
+  const pedido = [
+    `Hoje é ${dataLonga(HOJE)}. Rotina fixa de hoje: ${ROTINA[dow(HOJE)]}.`,
+    `Rotina da semana: ${Object.values(ROTINA).join('; ')}.`,
+    `Sermões do próximo domingo: ${sermoes.length ? sermoes.join(' | ') : 'nenhum planejado ainda'}.`,
+    `Estudos de célula desta semana: ${contexto.estudos.length ? contexto.estudos.map(e => `${e.titulo} (${e.referencia || ''}, ${e.data})`).join('; ') : 'nenhum datado'}.`,
+    `Agenda de hoje: ${contexto.agenda.length ? contexto.agenda.join('; ') : 'livre'}.`,
+    `Mural de hoje: ${contexto.mural.length ? contexto.mural.join('; ') : 'vazio'}.`,
+    `Devocional de hoje: ${contexto.dev || 'nenhum'}.`
+  ].join('\n');
+  const sistema = 'Você é o assistente pessoal de um bispo evangélico, pastor experiente e mestre em homilética. ' +
+    'Com base no dia dele, dê exatamente 3 sugestões práticas e concretas para aproveitar o dia (priorização, preparo de sermão ou estudo, cuidado pastoral, descanso). ' +
+    'Cada sugestão com no máximo 30 palavras, em português do Brasil, tratando-o por "o senhor". Não invente compromissos que não estão na lista. ' +
+    'Responda SOMENTE com um array JSON de 3 strings, sem nenhum texto antes ou depois.';
+  try {
+    const r = await fetch(WORKER_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 600, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n' + pedido }] }) });
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('HTTP ' + r.status));
+    const txt = (j.content || []).map(p => p.text || '').join('');
+    const a = txt.indexOf('['), z = txt.lastIndexOf(']');
+    const lista = JSON.parse(txt.slice(a, z + 1)).map(String).slice(0, 3);
+    gravarLS('canivete.sug.' + HOJE, lista);
+  } catch (e){
+    $('#sugCorpo').innerHTML = `<div class="erro">A IA não respondeu agora (${esc(e.message)}).</div><div class="botoes"><button class="btn peq" type="button" id="bSug">Tentar de novo</button></div>`;
+    $('#bSug').onclick = pedirSugestoes;
+    return;
+  }
+  pintarSugestoes();
 }
 
-async function abrir(id, posVersao){
-  if (posVersao == null) versoes = null;
-  $('#lTitulo').textContent = 'Abrindo…'; $('#lMeta').textContent = ''; $('#lCorpo').textContent = '';
-  mostrarLeitor();
-  pintarNav(posVersao);
-  const c = cliente();
-  const { data, error } = c ? await c.rpc('memoria_documento', { p_id: id }) : { data: null, error: { message: 'sem conexão' } };
-  const d = data && data[0];
-  if (error || !d){ $('#lTitulo').textContent = 'Não consegui abrir'; $('#lCorpo').textContent = error ? error.message : 'Documento não encontrado.'; return; }
-  $('#lTitulo').textContent = d.titulo || '(sem título)';
-  $('#lMeta').innerHTML = [
-    d.referencia && `<b>${esc(d.referencia)}</b>`,
-    d.tema && esc(d.tema),
-    [NOMES_TIPO[d.tipo] || d.tipo, d.quando, d.lugar, d.serie && ('Série: ' + d.serie)].filter(Boolean).map(esc).join(' · ')
-  ].filter(Boolean).join('<br>');
-  const corpo = esc(textoLimpo(d.conteudo));
-  $('#lCorpo').innerHTML = ultimo.linhas[0] && ultimo.linhas[0].motivo === 'palavra' ? destacar(corpo, ultimo.q) : corpo;
-  $('#lCorpo').scrollTop = 0;
+/* =====================================================================
+   PAINEL LATERAL (leitura do devocional e lista de apps dos cômodos)
+   ===================================================================== */
+function abrirPainel(titulo, meta, conteudo, comoTexto){
+  $('#pTitulo').textContent = titulo; $('#pMeta').textContent = meta || '';
+  const corpo = $('#pCorpo');
+  corpo.className = 'corpo' + (comoTexto ? ' texto' : '');
+  if (comoTexto) corpo.textContent = conteudo; else corpo.innerHTML = conteudo;
+  corpo.scrollTop = 0;
+  const P = $('#painel'); P.classList.add('aberto'); P.setAttribute('aria-hidden', 'false');
 }
-function fechar(){ const L = $('#leitor'); L.classList.remove('aberto'); L.setAttribute('aria-hidden', 'true'); versoes = null; }
-$('#lFechar').onclick = fechar;
-$('#leitor').addEventListener('click', e => { if (e.target.id === 'leitor') fechar(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#leitor').classList.contains('aberto')) fechar(); });
+function fecharPainel(){ const P = $('#painel'); P.classList.remove('aberto'); P.setAttribute('aria-hidden', 'true'); }
+$('#pFechar').onclick = fecharPainel;
+$('#painel').addEventListener('click', e => { if (e.target.id === 'painel') fecharPainel(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharPainel(); });
 
-/* ---------- início ---------- */
-$('#fBusca').addEventListener('submit', e => { e.preventDefault(); $('#q').blur(); buscar($('#q').value); });
-const qInicial = new URLSearchParams(location.search).get('q');
-if (qInicial){
-  $('#q').value = qInicial;
-  esperarCliente().then(async c => {
-    if (!c) return;
-    const s = await c.auth.getSession();
-    if (s.data && s.data.session) buscar(qInicial);
-    else window.addEventListener('porteiro:entrou', () => buscar(qInicial), { once: true });
-  });
-}
+document.querySelectorAll('nav.comodos [data-comodo]').forEach(b => b.onclick = () => {
+  const nome = b.dataset.comodo;
+  abrirPainel(nome, 'Os apps deste cômodo', `<div class="lista-apps"><div class="apps">` +
+    COMODOS[nome].map(([n, d, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}<small>${esc(d)}</small></a>`).join('') + '</div></div>', false);
+});
+document.querySelector('nav.comodos [data-ir="memoria"]').onclick = () => { location.href = 'memoria.html'; };
+
+/* =====================================================================
+   INÍCIO
+   ===================================================================== */
+carregarDolar();
+pintarSugestoes();
+esperarLogin().then(c => {
+  if (!c){ $('#chaveCorpo').innerHTML = '<div class="erro">Sem conexão com o banco. Confira a internet e toque em atualizar.</div>'; return; }
+  const seguro = (f, alvo) => f(c).catch(e => { if (alvo) $(alvo).innerHTML = `<div class="erro">${esc(e.message || e)}</div>`; });
+  seguro(carregarChave, '#chaveCorpo');
+  seguro(carregarAgenda, '#agendaCorpo');
+  seguro(carregarVidaPlena, '#muralCorpo');
+});
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   navigator.serviceWorker.register('sw.js').catch(() => {});
