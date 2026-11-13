@@ -1,6 +1,6 @@
-// Memória (Canivete) — service worker v0.1.0
+// Memória (Canivete) — service worker v0.2.0
 // Arquivos do app: rede primeiro (as atualizações do GitHub aparecem logo); sem internet, usa o que está guardado.
-const CACHE = 'canivete-memoria-0.1.0';
+const CACHE = 'canivete-memoria-0.2.0';
 const BASICOS = ['./', 'index.html', 'porteiro.js', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icon-maskable.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASICOS)).catch(() => {}).then(() => self.skipWaiting()));

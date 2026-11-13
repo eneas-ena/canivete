@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Memória" data-versao="0.1.0"></script>
+<script src="porteiro.js" data-app="Memória" data-versao="0.2.0"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -71,6 +71,20 @@ form.busca input:focus{outline:2px solid var(--ouro);border-color:var(--ouro)}
 #leitor .meta b{color:var(--ouroTexto);font-weight:500}
 #leitor .corpo{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:18px 22px calc(env(safe-area-inset-bottom,0px) + 30px);font-size:17px;line-height:1.65;white-space:pre-wrap}
 mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
+#lNav{display:none;align-items:center;justify-content:space-between;gap:8px;padding:10px 18px;border-bottom:1px solid var(--borda);background:var(--cartao)}
+#lNav.ativo{display:flex}
+#lNav .meio{font-size:14px;color:var(--mudo);text-align:center}
+#lNav .meio b{color:var(--texto)}
+.navbtn{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--borda);background:transparent;color:var(--texto);font-size:14px}
+.navbtn:disabled{opacity:.35}
+.versoes{white-space:normal;display:flex;flex-direction:column;gap:10px}
+.versoes .aviso{font-size:14px;color:var(--mudo);line-height:1.5}
+.versao-item{text-align:left;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.versao-item:hover{border-color:var(--ouro)}
+.versao-item .num{flex:none;width:40px;height:40px;border-radius:10px;background:var(--cartao2);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--ouroTexto)}
+.versao-item .info{display:flex;flex-direction:column;gap:4px;font-size:15px;line-height:1.4}
+.versao-item .info small{font-size:13px;color:var(--mudo)}
+.letra{display:inline-block;min-width:22px;text-align:center;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--marca)}
 .rodape-app{margin-top:40px;text-align:center;font-size:12px;color:var(--mudo)}
 @media (max-width:560px){ .marca h1{font-size:30px} form.busca{flex-direction:column} form.busca input{flex:none;width:100%} .btn{width:100%} }
 </style>
@@ -115,6 +129,11 @@ mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
+    <div id="lNav">
+      <button class="navbtn" id="lAnt" type="button">‹ Anterior</button>
+      <div class="meio" id="lPos"></div>
+      <button class="navbtn" id="lProx" type="button">Próxima ›</button>
+    </div>
     <div class="corpo" id="lCorpo"></div>
   </div>
 </div>
@@ -127,7 +146,7 @@ mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
      (arquivos memoria_etapa1.sql e memoria_etapa1b.sql).
    · Login: porteiro.js (o mesmo dos outros apps pessoais).
    ===================================================================== */
-const VERSAO = '0.1.0';
+const VERSAO = '0.2.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 
@@ -257,26 +276,42 @@ function pintar(){
       ['Mencionam de passagem', visiveis.filter(l => l.relevancia < 0.4)]
     ];
   }
+  // sermões repetidos (mesmo título) viram um cartão só, com as versões dentro
+  cartoes = [];
   grupos.filter(g => g[1].length).forEach(([nome, ls]) => {
-    html += `<section class="grupo"><h2>${esc(nome.toUpperCase())} <span>· ${ls.length}</span></h2><div class="lista">` +
-      ls.map(l => {
-        const n = contaTitulo[chaveTitulo(l.titulo)];
-        return `<button class="item" type="button" data-id="${esc(l.documento)}">
+    const mapa = new Map(), juntos = [];
+    ls.forEach(l => {
+      const k = chaveTitulo(l.titulo);
+      if (!mapa.has(k)){ const g = { itens: [] }; mapa.set(k, g); juntos.push(g); }
+      mapa.get(k).itens.push(l);
+    });
+    html += `<section class="grupo"><h2>${esc(nome.toUpperCase())} <span>· ${juntos.length}</span></h2><div class="lista">` +
+      juntos.map(g => {
+        const i = cartoes.push(g.itens) - 1, l = g.itens[0], n = g.itens.length;
+        const refs = [...new Set(g.itens.map(x => x.referencia).filter(Boolean))];
+        const anosG = g.itens.map(ano).filter(Boolean);
+        const quando = n === 1 ? l.quando : (anosG.length ? (Math.min(...anosG) === Math.max(...anosG) ? String(anosG[0]) : `${Math.min(...anosG)}–${Math.max(...anosG)}`) : '');
+        const lugares = [...new Set(g.itens.map(x => x.lugar).filter(Boolean))];
+        return `<button class="item" type="button" data-c="${i}">
           <span class="titulo">${esc(l.titulo || '(sem título)')}</span>
-          ${l.referencia ? `<span class="ref">${esc(l.referencia)}</span>` : ''}
+          ${refs.length ? `<span class="ref">${esc(refs.length > 2 ? refs.slice(0, 2).join(' · ') + ` · +${refs.length - 2}` : refs.join(' · '))}</span>` : ''}
           ${l.tema ? `<span class="tema">${esc(l.tema)}</span>` : ''}
           <span class="rodape">
             <span class="selo">${esc(NOMES_TIPO[l.tipo] || l.tipo || '')}</span>
-            ${l.quando ? `<span class="selo">${esc(l.quando)}</span>` : ''}
-            ${l.lugar ? `<span class="selo">${esc(l.lugar)}</span>` : ''}
-            ${n > 1 ? `<span class="selo repetido">repetido ${n}×</span>` : ''}
+            ${quando ? `<span class="selo">${esc(quando)}</span>` : ''}
+            ${lugares.length === 1 ? `<span class="selo">${esc(lugares[0])}</span>` : ''}
+            ${n > 1 ? `<span class="selo repetido">${n} versões</span>` : ''}
           </span></button>`;
       }).join('') + '</div></section>';
   });
   saida.innerHTML = html;
   saida.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { ultimo.filtro = b.dataset.f; pintar(); });
-  saida.querySelectorAll('[data-id]').forEach(b => b.onclick = () => abrir(b.dataset.id));
+  saida.querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
+    const itens = cartoes[+b.dataset.c];
+    if (itens.length === 1) abrir(itens[0].documento); else abrirVersoes(itens);
+  });
 }
+let cartoes = [];
 
 /* ---------- leitura de um documento ---------- */
 function textoLimpo(c){
@@ -291,10 +326,77 @@ function destacar(textoEscapado, q){
   if (!termos.length) return textoEscapado;
   return textoEscapado.replace(new RegExp('(' + termos.join('|') + ')', 'gi'), '<mark>$1</mark>');
 }
-async function abrir(id){
-  const L = $('#leitor');
+/* Versões de um sermão repetido: lista para escolher qual abrir */
+let versoes = null;   // { lista: [...], letras: {assinatura: 'A'}, contagem: {assinatura: n} } enquanto o leitor mostra versões
+function mostrarLeitor(){ const L = $('#leitor'); L.classList.add('aberto'); L.setAttribute('aria-hidden', 'false'); }
+function milCaracteres(n){ return n >= 1000 ? (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil caracteres' : n + ' caracteres'; }
+
+async function abrirVersoes(itens){
+  mostrarLeitor();
+  $('#lNav').classList.remove('ativo');
+  $('#lTitulo').textContent = itens[0].titulo || '(sem título)';
+  $('#lMeta').textContent = `${itens.length} versões · carregando…`;
+  $('#lCorpo').innerHTML = '';
+  const c = cliente();
+  const { data, error } = c ? await c.rpc('memoria_versoes', { p_ids: itens.map(x => x.documento) }) : { data: null, error: { message: 'sem conexão' } };
+  let lista, aviso = '';
+  if (error || !data || !data.length){
+    // sem a função nova: usa o que a busca já trouxe (sem dizer quais textos são iguais)
+    lista = itens.slice();
+    aviso = /memoria_versoes|function/i.test((error && error.message) || '')
+      ? 'Para ver quais versões têm o texto igual e quais foram mexidas, rode no Supabase o arquivo <b>memoria_etapa1c.sql</b>.'
+      : '';
+  } else lista = data;
+  const contagem = {}, letras = {};
+  lista.forEach(v => { if (v.assinatura){ contagem[v.assinatura] = (contagem[v.assinatura] || 0) + 1; } });
+  let proxima = 0;
+  lista.forEach(v => { if (v.assinatura && !letras[v.assinatura]) letras[v.assinatura] = String.fromCharCode(65 + (proxima++ % 26)); });
+  versoes = { lista, letras, contagem, aviso };
+  pintarVersoes();
+}
+function pintarVersoes(){
+  const { lista, letras, contagem, aviso } = versoes;
+  $('#lNav').classList.remove('ativo');
+  $('#lTitulo').textContent = lista[0].titulo || '(sem título)';
+  const anosV = lista.map(ano).filter(Boolean);
+  const distintos = Object.keys(contagem).length;
+  $('#lMeta').innerHTML = `${lista.length} versões${anosV.length ? ` · ${Math.min(...anosV)}${Math.max(...anosV) !== Math.min(...anosV) ? '–' + Math.max(...anosV) : ''}` : ''}` +
+    (distintos ? `<br>${distintos === 1 ? 'Todas com o <b>mesmo texto</b>' : `<b>${distintos} textos diferentes</b> — a mesma letra indica texto idêntico`}` : '');
+  $('#lCorpo').innerHTML = `<div class="versoes">${aviso ? `<div class="aviso">${aviso}</div>` : ''}` +
+    lista.map((v, i) => {
+      const letra = v.assinatura ? letras[v.assinatura] : '';
+      const iguais = v.assinatura ? contagem[v.assinatura] - 1 : 0;
+      const linha2 = [v.referencia, v.tema].filter(Boolean).map(esc).join(' · ');
+      const linha3 = [
+        v.tamanho != null ? milCaracteres(v.tamanho) : '',
+        letra ? (iguais ? `texto <span class="letra">${letra}</span> igual a ${iguais} ${iguais === 1 ? 'outra' : 'outras'}` : `texto <span class="letra">${letra}</span> único`) : ''
+      ].filter(Boolean).join(' · ');
+      return `<button class="versao-item" type="button" data-v="${i}">
+        <span class="num">${i + 1}</span>
+        <span class="info"><span>${esc([v.quando, v.lugar].filter(Boolean).join(' · ') || 'sem data')}</span>
+        ${linha2 ? `<small>${linha2}</small>` : ''}${linha3 ? `<small>${linha3}</small>` : ''}</span></button>`;
+    }).join('') + '</div>';
+  $('#lCorpo').scrollTop = 0;
+  $('#lCorpo').querySelectorAll('[data-v]').forEach(b => b.onclick = () => abrir(lista[+b.dataset.v].documento, +b.dataset.v));
+}
+function pintarNav(pos){
+  if (!versoes || pos == null){ $('#lNav').classList.remove('ativo'); return; }
+  const n = versoes.lista.length, v = versoes.lista[pos];
+  const letra = v.assinatura ? ` · texto <span class="letra">${versoes.letras[v.assinatura]}</span>` : '';
+  $('#lPos').innerHTML = `<b>Versão ${pos + 1} de ${n}</b>${letra}<br><button class="navbtn" id="lTodas" type="button" style="margin-top:6px">Todas as versões</button>`;
+  $('#lAnt').disabled = pos === 0;
+  $('#lProx').disabled = pos === n - 1;
+  $('#lAnt').onclick = () => abrir(versoes.lista[pos - 1].documento, pos - 1);
+  $('#lProx').onclick = () => abrir(versoes.lista[pos + 1].documento, pos + 1);
+  $('#lTodas').onclick = pintarVersoes;
+  $('#lNav').classList.add('ativo');
+}
+
+async function abrir(id, posVersao){
+  if (posVersao == null) versoes = null;
   $('#lTitulo').textContent = 'Abrindo…'; $('#lMeta').textContent = ''; $('#lCorpo').textContent = '';
-  L.classList.add('aberto'); L.setAttribute('aria-hidden', 'false');
+  mostrarLeitor();
+  pintarNav(posVersao);
   const c = cliente();
   const { data, error } = c ? await c.rpc('memoria_documento', { p_id: id }) : { data: null, error: { message: 'sem conexão' } };
   const d = data && data[0];
@@ -309,7 +411,7 @@ async function abrir(id){
   $('#lCorpo').innerHTML = ultimo.linhas[0] && ultimo.linhas[0].motivo === 'palavra' ? destacar(corpo, ultimo.q) : corpo;
   $('#lCorpo').scrollTop = 0;
 }
-function fechar(){ const L = $('#leitor'); L.classList.remove('aberto'); L.setAttribute('aria-hidden', 'true'); }
+function fechar(){ const L = $('#leitor'); L.classList.remove('aberto'); L.setAttribute('aria-hidden', 'true'); versoes = null; }
 $('#lFechar').onclick = fechar;
 $('#leitor').addEventListener('click', e => { if (e.target.id === 'leitor') fechar(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#leitor').classList.contains('aberto')) fechar(); });
