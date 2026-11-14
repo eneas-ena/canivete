@@ -10,7 +10,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.11.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="pesquisa.js"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.12.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -135,6 +136,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
       <label>Texto bíblico <input type="text" id="cRef" placeholder="Ex.: Colossenses 4:2"></label>
       <label class="largo">Ideia central (Big Idea) <textarea id="cIdeia" placeholder="Deixe em branco para a IA definir a partir do texto e do devocional"></textarea></label>
     </div>
+    <div id="cPesq"></div>
     <details class="leitura" id="leitura" hidden><summary>Ler o devocional escolhido</summary><div id="leituraTxt"></div></details>
     <div class="botoes">
       <button class="btn ouro" type="button" id="bGerarA">Gerar estudo dos adultos</button>
@@ -178,7 +180,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.11.0';
+const VERSAO = '0.12.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -286,6 +288,9 @@ const CAMPOS = { numero: '#cNumero', data: '#cData', ano: '#cAno', tempo: '#cTem
 function lerCampos(){ for (const [k, s] of Object.entries(CAMPOS)) E.campos[k] = $(s).value.trim(); guardar(); }
 function preencherCampos(){ for (const [k, s] of Object.entries(CAMPOS)) if (E.campos[k] != null && E.campos[k] !== '') $(s).value = E.campos[k]; }
 Object.values(CAMPOS).forEach(s => $(s).addEventListener('change', lerCampos));
+const cPesq = () => { $('#cPesq').innerHTML = barraPesquisa($('#cRef').value.trim(), 'Pesquisar o texto em'); };
+$('#cRef').addEventListener('input', cPesq); $('#devs').addEventListener('click', () => setTimeout(cPesq, 0));
+setInterval(() => { const v = $('#cRef').value.trim(); if (v !== ($('#cPesq').dataset.v || '')){ $('#cPesq').dataset.v = v; cPesq(); } }, 1500);
 $('#cData').addEventListener('change', async () => {
   const a = +($('#cData').value || '').slice(0, 4);
   if (TEMAS_ANO[a]) $('#cAno').value = `${a} – ${TEMAS_ANO[a]}`;

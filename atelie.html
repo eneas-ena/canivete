@@ -10,7 +10,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.11.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="pesquisa.js"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.12.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -159,6 +160,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
       <label class="largo">Ideia central (Big Idea) <textarea id="gIdeia" placeholder="Deixe em branco para a IA definir a partir do texto"></textarea></label>
       <label class="largo">Público-alvo <input type="text" id="gPublico"></label>
     </div>
+    <div id="gPesq"></div>
     <div class="g-botoes"><button class="btn ouro" type="button" id="bGerarSermao">Gerar sermão</button><button class="btn" type="button" id="bGerarDescartar" hidden>Descartar a geração</button></div>
     <ol class="g-passos" id="gPassos"></ol>
     <div id="gMsg" aria-live="polite"></div>
@@ -234,7 +236,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.11.0';
+const VERSAO = '0.12.0';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -1250,6 +1252,9 @@ function gFinalizar(){
 $('#bGerarSermao').onclick = gerarSermao;
 $('#bGerarDescartar').onclick = () => { if (confirm('Descartar a geração em andamento?')){ G = null; gravarLS('atelie.gerando', null); $('#gPassos').innerHTML = ''; $('#gMsg').innerHTML = ''; gBotoes(false); } };
 $('#gDom').addEventListener('change', gCarregarCultos);
+const gPesq = () => { $('#gPesq').innerHTML = barraPesquisa($('#gRef').value.trim(), 'Pesquisar o texto em'); };
+$('#gRef').addEventListener('input', gPesq);
+$('#gCultos').addEventListener('click', () => setTimeout(gPesq, 0));
 (function iniciarGeracao(){
   const pedida = new URLSearchParams(location.search).get('data');
   if (pedida && /^\d{4}-\d{2}-\d{2}$/.test(pedida) && atual && atual.data !== pedida && !G) novoSermao();
@@ -1258,7 +1263,7 @@ $('#gDom').addEventListener('change', gCarregarCultos);
   if (G){ $('#gTema').value = G.tema || ''; $('#gRef').value = G.ref || ''; $('#gIdeia').value = G.ideia || ''; $('#gTempo').value = G.tempo || 40; if (G.culto) $('#gCultos').dataset.culto = G.culto;
     gPassos(); if (G.intro) gPasso(0, 'feito'); (G.pontos || []).forEach((p, k) => { if (p && p.exegese) gPasso(1 + k, 'feito'); if (p && p.frase) gPasso(6 + k, 'feito'); }); if (G.conclusao) gPasso(5, 'feito');
     $('#gMsg').innerHTML = '<div class="aviso">Há uma geração interrompida guardada: toque em “Continuar a geração”.</div>'; }
-  gBotoes(false);
+  gBotoes(false); gPesq();
   if (!(atual && atual.html)) gCarregarCultos();
 })();
 

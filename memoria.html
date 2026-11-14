@@ -11,7 +11,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Memória" data-versao="0.11.0"></script>
+<script src="pesquisa.js"></script>
+<script src="porteiro.js" data-app="Memória" data-versao="0.12.0"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -146,7 +147,7 @@ mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
      (arquivos memoria_etapa1.sql e memoria_etapa1b.sql).
    · Login: porteiro.js (o mesmo dos outros apps pessoais).
    ===================================================================== */
-const VERSAO = '0.11.0';
+const VERSAO = '0.12.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 
@@ -238,7 +239,7 @@ function pintar(){
   const { q, linhas, filtro } = ultimo;
   const saida = $('#saida');
   if (!linhas.length){
-    saida.innerHTML = `<div class="vazio">Nada encontrado para <b>${esc(q)}</b>.<br>Tente outra forma de escrever (por exemplo "Rm 8" ou só o livro e o capítulo), ou uma palavra mais simples.</div>`;
+    saida.innerHTML = `<div class="vazio">Nada encontrado para <b>${esc(q)}</b>.<br>Tente outra forma de escrever (por exemplo "Rm 8" ou só o livro e o capítulo), ou uma palavra mais simples.</div>` + barraPesquisa(q, 'Pesquisar ' + q + ' em');
     return;
   }
   // repetidos: mesmo título mais de uma vez
@@ -256,6 +257,7 @@ function pintar(){
 
   let html = `<div class="resumo">${linhas.length} ${linhas.length === 1 ? 'resultado' : 'resultados'} para “${esc(q)}”
     <small>${partes.join(', ')} ${periodo ? '· ' + periodo : ''}${repetidos ? ` · ${repetidos} ${repetidos === 1 ? 'título repetido' : 'títulos repetidos'}` : ''}${linhas.length >= 300 ? ' · mostrando os 300 primeiros' : ''}</small></div>`;
+  html += barraPesquisa(q, 'Pesquisar ' + q + ' em');
 
   // filtros por tipo
   const tipos = Object.keys(porTipo);
