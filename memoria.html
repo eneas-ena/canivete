@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Memória" data-versao="0.12.1"></script>
+<script src="porteiro.js" data-app="Memória" data-versao="0.13.0"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -96,7 +96,7 @@ mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
     <div class="marca">
       <small><a href="./" style="color:inherit;text-decoration:none" aria-label="Voltar para Hoje">‹ CANIVETE · HOJE</a></small>
       <h1>Memória</h1>
-      <p>Digite uma chave e veja o que você já fez com ela</p>
+      <p>Digite uma chave e veja o que você já fez com ela · <a href="importar.html" style="color:var(--ouroTexto)">levar cursos, apostilas e pesquisas</a></p>
     </div>
     <div class="acoes">
       <span class="versao" id="versao"></span>
@@ -147,7 +147,7 @@ mark{background:var(--marca);color:inherit;border-radius:3px;padding:0 2px}
      (arquivos memoria_etapa1.sql e memoria_etapa1b.sql).
    · Login: porteiro.js (o mesmo dos outros apps pessoais).
    ===================================================================== */
-const VERSAO = '0.12.1';
+const VERSAO = '0.13.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 
@@ -157,9 +157,9 @@ const lerLS = (k, d) => { try { const v = localStorage.getItem(k); return v ? JS
 const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 const semAcento = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-const NOMES_TIPO = { sermao: 'Sermão', estudo: 'Estudo', aula: 'Aula', palestra: 'Palestra' };
-const PLURAL_TIPO = { sermao: 'sermões', estudo: 'estudos', aula: 'aulas', palestra: 'palestras' };
-const ROTULO_FILTRO = { sermao: 'Sermões', estudo: 'Estudos', aula: 'Aulas', palestra: 'Palestras' };
+const NOMES_TIPO = { sermao: 'Sermão', estudo: 'Estudo', aula: 'Aula', palestra: 'Palestra', curso: 'Curso', apostila: 'Apostila', pesquisa: 'Pesquisa', material: 'Material' };
+const PLURAL_TIPO = { sermao: 'sermões', estudo: 'estudos', aula: 'aulas', palestra: 'palestras', curso: 'lições de curso', apostila: 'apostilas', pesquisa: 'pesquisas', material: 'materiais' };
+const ROTULO_FILTRO = { sermao: 'Sermões', estudo: 'Estudos', aula: 'Aulas', palestra: 'Palestras', curso: 'Cursos', apostila: 'Apostilas', pesquisa: 'Pesquisas', material: 'Materiais' };
 
 /* ---------- versão, tema e atualizar ---------- */
 $('#versao').textContent = 'v' + VERSAO;
@@ -252,7 +252,7 @@ function pintar(){
   const anos = linhas.map(ano).filter(Boolean);
   const periodo = anos.length ? (Math.min(...anos) === Math.max(...anos) ? `em ${anos[0]}` : `de ${Math.min(...anos)} a ${Math.max(...anos)}`) : '';
   const partes = Object.keys(porTipo).sort((a, b) => porTipo[b] - porTipo[a]).map(t => `${porTipo[t]} ${porTipo[t] === 1 ? (NOMES_TIPO[t] || t).toLowerCase() : (PLURAL_TIPO[t] || t)}`);
-  const porTexto = linhas[0].motivo === 'texto';
+  const porTexto = linhas[0].motivo === 'texto' || linhas[0].motivo === 'citado';
   const repetidos = Object.values(contaTitulo).filter(n => n > 1).length;
 
   let html = `<div class="resumo">${linhas.length} ${linhas.length === 1 ? 'resultado' : 'resultados'} para “${esc(q)}”
@@ -271,7 +271,7 @@ function pintar(){
   const visiveis = linhas.filter(l => filtro === 'todos' || l.tipo === filtro);
   let grupos;
   if (porTexto){
-    grupos = [['Sobre este texto', visiveis]];
+    grupos = [['Sobre este texto', visiveis.filter(l => l.motivo !== 'citado')], ['Citam este texto (cursos, apostilas…)', visiveis.filter(l => l.motivo === 'citado')]];
   } else {
     grupos = [
       ['Tratam do assunto', visiveis.filter(l => l.relevancia >= 0.4)],
