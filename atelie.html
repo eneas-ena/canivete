@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.6.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.6.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,7 +54,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .folha li{margin:0 0 3px}
 .folha li.branco{list-style:none}
 .salvo{font-size:12px;color:var(--mudo);min-width:110px}
-.folha .rot-ilus{color:#AB7942;font-style:italic;font-size:13px;margin:10px 0 2px;text-align:left}
+.folha .rot-ilus{color:#AB7942;font-style:italic;font-size:13px;margin:10px 0 0;padding:4px 6px 0;text-align:left;background:#F6DDD3}
+.folha ul.ilus{background:#F6DDD3;margin:0 0 6px;padding:2px 6px 4px 28px}
 .folha .frase{text-align:center;font-weight:700;margin:14px 0}
 .folha .frase span{background:#FFFF00}
 .folha .nota-cortado{display:none}
@@ -172,7 +173,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.6.0';
+const VERSAO = '0.6.1';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -250,7 +251,7 @@ function diagramar(html){
   if (!ps.length) throw new Error('O arquivo parece vazio.');
   let out = '', modo = 'corpo', secao = '', ref = '', lista = false, bigIdea = '';
   const fecharLista = () => { if (lista){ out += '</ul>'; lista = false; } };
-  const bullet = h => { if (!lista){ out += '<ul>'; lista = true; } out += '<li>' + h + '</li>'; };
+  const bullet = h => { if (!lista){ out += modo === 'ilustracao' ? '<ul class="ilus">' : '<ul>'; lista = true; } out += '<li>' + h + '</li>'; };
   const titulo = ps[0].textContent.trim();
   out += `<h1 class="titulo">${esc(titulo.toUpperCase())}</h1>`;
   for (const p of ps.slice(1)){
@@ -383,7 +384,8 @@ async function docxBlob(){
   clearTimeout(tSalvar); if (atual){ atual.html = $('#folha').innerHTML; gravarLS('atelie.rascunho', atual); }
   {
     const D = await carregarDocx();
-    const { Document, Paragraph, TextRun, AlignmentType, Packer, LevelFormat, HighlightColor, UnderlineType } = D;
+    const { Document, Paragraph, TextRun, AlignmentType, Packer, LevelFormat, HighlightColor, UnderlineType, ShadingType } = D;
+    const FUNDO_ILUS = { type: ShadingType.CLEAR, color: 'auto', fill: 'F6DDD3' };
     const filhos = [], vazio = () => new Paragraph({ children: [] });
     const folha = $('#folha');
     [...folha.children].forEach(el => {
@@ -397,13 +399,14 @@ async function docxBlob(){
       } else if (c.contains('secao')){
         filhos.push(vazio(), new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: el.textContent.trim(), bold: true, size: 28, color: BRONZE })] }));
       } else if (c.contains('rot-ilus')){
-        filhos.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 120 }, children: [new TextRun({ text: 'Ilustração', italics: true, size: 20, color: BRONZE })] }));
+        filhos.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 120 }, shading: FUNDO_ILUS, children: [new TextRun({ text: 'Ilustração', italics: true, size: 20, color: BRONZE })] }));
       } else if (c.contains('frase')){
         filhos.push(vazio(), new Paragraph({ alignment: AlignmentType.CENTER, children: runs(D, el, { bold: true, highlight: 'yellow' }) }), vazio());
       } else if (el.nodeName === 'UL'){
+        const ilus = el.classList.contains('ilus');
         el.querySelectorAll(':scope > li').forEach(li => {
           if (!li.textContent.trim()){ filhos.push(vazio()); return; }          // linha em branco que o Bispo pôs
-          filhos.push(new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { after: 40 }, children: runs(D, li) }));
+          filhos.push(new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { after: 40 }, ...(ilus ? { shading: FUNDO_ILUS } : {}), children: runs(D, li) }));
         });
       } else if (el.textContent.trim()){
         filhos.push(new Paragraph({ children: runs(D, el) }));
