@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Canivete" data-versao="0.10.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.11.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -206,7 +206,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.10.2';
+const VERSAO = '0.11.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -336,6 +336,7 @@ async function carregarChave(c){
     c.from('canivete_plano_estudos').select('*').eq('data_estudo', qua).maybeSingle(),
     c.from('cel_estudos').select('publico,data_estudo').eq('data_estudo', qua).eq('arquivado', false)
   ]);
+  const ro = await c.from('canivete_outros_cultos').select('*').gte('data', HOJE).lt('data', proximoDomingo() === HOJE ? addDias(HOJE, 7) : proximoDomingo()).order('data');
   if (rd.error && /canivete_domingo|function/i.test(rd.error.message || '')){
     $('#chaveCorpo').innerHTML = '<div class="erro">Falta rodar no Supabase o arquivo <b>canivete_hoje.sql</b>.</div>';
     return;
@@ -346,7 +347,23 @@ async function carregarChave(c){
   const blocoDom = htmlDomingo(dom, rd.error);
   const blocoEst = htmlEstudos(est, rp && !rp.error ? rp.data : null, rc && !rc.error ? rc.data : []);
   // na quarta (dia das células) os estudos vêm primeiro
-  $('#chaveCorpo').innerHTML = dow(HOJE) === 3 ? blocoEst + blocoDom : blocoDom + blocoEst;
+  const blocoOutro = htmlOutros(ro && !ro.error ? ro.data || [] : []);
+  // o outro culto vem antes quando é hoje ou amanhã; na quarta (dia das células) os estudos vêm primeiro
+  const outroPerto = (ro && ro.data || []).some(o => o.data === HOJE || o.data === AMANHA);
+  $('#chaveCorpo').innerHTML = (outroPerto ? blocoOutro : '') + (dow(HOJE) === 3 ? blocoEst + blocoDom : blocoDom + blocoEst) + (outroPerto ? '' : blocoOutro);
+}
+
+/* cultos fora do domingo, desta semana (marcados em Planejar → Outros cultos) */
+function htmlOutros(L){
+  if (!L.length) return '';
+  const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  return `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+    <div class="grupo-rot">OUTRO CULTO</div>
+    ${L.map(o => `<div class="linha"><span class="rot">${o.data === HOJE ? 'Hoje' : o.data === AMANHA ? 'Amanhã' : DIAS[dow(o.data)] + ', ' + dataCurta(o.data)}</span>
+      <span class="txt"><b>${esc(o.tema || o.nome || 'Culto')}</b><span>${esc([o.nome, o.referencia].filter(Boolean).join(' · '))}</span></span>
+      <span class="botoes" style="justify-content:flex-end;align-items:center"><span class="selo s-${o.documento ? 'pronto' : 'planejado'}">${o.documento ? 'Pronto' : 'Sem sermão'}</span>
+      <a class="btn peq${o.documento ? '' : ' ouro'}" href="atelie.html?data=${o.data}">Ateliê</a></span></div>`).join('')}
+  </div>`;
 }
 
 function proximoDomingo(){ const d = dow(HOJE); return addDias(HOJE, (7 - d) % 7); }

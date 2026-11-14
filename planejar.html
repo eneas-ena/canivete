@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Planejar" data-versao="0.10.2"></script>
+<script src="porteiro.js" data-app="Planejar" data-versao="0.11.0"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -106,6 +106,25 @@ a.mem{color:var(--ouroTexto);font-size:13px}
         <span id="semMsg" class="aviso" aria-live="polite"></span>
       </div>
     </div>
+    <div class="cartao">
+      <h2>OUTROS CULTOS</h2>
+      <p class="aviso">Sábado especial, culto de oração, evento… quando você for pregar fora do domingo. Um por dia.</p>
+      <div id="outros"></div>
+      <div class="culto" style="border-top:1px solid var(--borda);margin-top:6px">
+        <span class="rot">Novo</span>
+        <div>
+          <div class="campos" style="grid-template-columns:auto 1fr">
+            <input type="date" id="oData" aria-label="Data do culto">
+            <input type="text" id="oNome" placeholder="Culto (ex.: Culto especial de sábado)" aria-label="Nome do culto">
+          </div>
+          <div class="campos" style="margin-top:8px">
+            <input type="text" id="oTema" placeholder="Tema / título" aria-label="Tema">
+            <input type="text" id="oRef" placeholder="Texto bíblico" aria-label="Texto bíblico">
+          </div>
+        </div>
+      </div>
+      <div class="rodape"><button class="btn ouro" type="button" id="bOutro">Adicionar culto</button><span id="oMsg" class="aviso" aria-live="polite"></span></div>
+    </div>
   </section>
 
   <!-- MÊS -->
@@ -124,7 +143,7 @@ a.mem{color:var(--ouroTexto);font-size:13px}
 </div>
 
 <script>
-const VERSAO = '0.10.2';
+const VERSAO = '0.11.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const $ = s => document.querySelector(s);
@@ -165,7 +184,7 @@ function abrirAba(a){
   document.querySelectorAll('.aba').forEach(b => b.classList.toggle('ativa', b.dataset.aba === a));
   document.querySelectorAll('.painel').forEach(p => p.classList.toggle('ativo', p.id === 'p-' + a));
   history.replaceState(null, '', '#' + a);
-  if (a === 'semana' && !semanaCarregada) carregarSemana();
+  if (a === 'semana' && !semanaCarregada){ carregarSemana(); carregarOutros(); }
   if (a === 'mes' && !mesCarregado) carregarMes();
 }
 document.querySelectorAll('.aba').forEach(b => b.onclick = () => abrirAba(b.dataset.aba));
@@ -242,6 +261,51 @@ async function confirmarCultos(){
   btn.disabled = false;
 }
 $('#bConfirmar').onclick = confirmarCultos;
+
+/* ---------- outros cultos (fora do domingo) ---------- */
+const DIA_SEM = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+async function carregarOutros(){
+  try {
+    const c = await clienteLogado();
+    const r = await c.from('canivete_outros_cultos').select('*').gte('data', iso(new Date())).order('data');
+    if (r.error) throw r.error;
+    const L = r.data || [];
+    $('#outros').innerHTML = L.length ? L.map(o => `<div class="culto" data-d="${o.data}">
+      <span class="rot">${DIA_SEM[new Date(o.data + 'T12:00').getDay()]}, ${dataBR(o.data)}</span>
+      <div>
+        <div style="font-weight:600">${esc(o.nome || 'Culto')}</div>
+        <div class="campos" style="margin-top:6px"><input type="text" class="oT" value="${esc(o.tema || '')}" placeholder="Tema / título" aria-label="Tema"><input type="text" class="oR" value="${esc(o.referencia || '')}" placeholder="Texto bíblico" aria-label="Texto bíblico"></div>
+        <div class="info" style="margin-top:6px"><span class="selo ${o.documento ? 'esc' : ''}">${o.documento ? 'Sermão pronto' : 'Sem sermão ainda'}</span>
+          <button class="btn peq oSalvar" type="button">Salvar</button><button class="btn peq oTirar" type="button">Remover</button>
+          ${o.referencia ? `<a class="mem" href="${memLink(o.referencia)}">O que já fiz com ${esc(o.referencia)}</a>` : ''}</div>
+      </div></div>`).join('') : '<p class="aviso">Nenhum outro culto marcado daqui para frente.</p>';
+  } catch (e){
+    $('#outros').innerHTML = `<p class="erro">${/canivete_outros_cultos|does not exist|schema cache/i.test(e.message || '') ? 'Falta rodar no Supabase o arquivo canivete_outros.sql.' : 'Não consegui ler: ' + esc(e.message || e)}</p>`;
+  }
+}
+$('#outros').addEventListener('click', async ev => {
+  const el = ev.target.closest('.culto'); if (!el) return;
+  const c = await clienteLogado(), d = el.dataset.d;
+  if (ev.target.classList.contains('oSalvar')){
+    const r = await c.from('canivete_outros_cultos').update({ tema: norm(el.querySelector('.oT').value) || null, referencia: norm(el.querySelector('.oR').value) || null, atualizado: new Date().toISOString() }).eq('data', d);
+    $('#oMsg').innerHTML = r.error ? `<span class="erro">${esc(r.error.message)}</span>` : '<span class="ok">Salvo ✓</span>'; carregarOutros();
+  }
+  if (ev.target.classList.contains('oTirar') && confirm(`Remover o culto de ${dataBR(d)}? (Se já tem sermão, ele continua no KTL.)`)){
+    await c.from('canivete_outros_cultos').delete().eq('data', d); carregarOutros();
+  }
+});
+$('#bOutro').onclick = async () => {
+  const data = $('#oData').value, nome = norm($('#oNome').value);
+  if (!data){ $('#oMsg').innerHTML = '<span class="erro">Escolha a data.</span>'; return; }
+  if (new Date(data + 'T12:00').getDay() === 0){ $('#oMsg').innerHTML = '<span class="erro">Domingo é planejado nos cultos acima.</span>'; return; }
+  try {
+    const c = await clienteLogado();
+    const r = await c.from('canivete_outros_cultos').upsert({ data, nome: nome || 'Culto especial', tema: norm($('#oTema').value) || null, referencia: norm($('#oRef').value) || null, atualizado: new Date().toISOString() }, { onConflict: 'data' });
+    if (r.error) throw r.error;
+    ['#oData', '#oNome', '#oTema', '#oRef'].forEach(k => $(k).value = '');
+    $('#oMsg').innerHTML = '<span class="ok">Culto adicionado ✓</span>'; carregarOutros();
+  } catch (e){ $('#oMsg').innerHTML = `<span class="erro">${/canivete_outros_cultos|does not exist|schema cache/i.test(e.message || '') ? 'Falta rodar no Supabase o arquivo canivete_outros.sql.' : esc(e.message || e)}</span>`; }
+};
 $('#dom').addEventListener('change', carregarSemana);
 
 /* =====================================================================

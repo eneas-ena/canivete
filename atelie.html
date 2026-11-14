@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.10.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.11.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -150,7 +150,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
   <section class="gerar" id="gerarSec" aria-labelledby="hGerar">
     <h2 id="hGerar">GERAR O SERMÃO COM IA</h2>
     <p class="aviso">Com o seu prompt de sermões. A Memória entra junto: a IA vê o que você já pregou com o mesmo texto, para não repetir.</p>
-    <div class="g-linha"><label class="aviso" for="gDom">Domingo</label><input type="date" id="gDom"><span class="aviso" id="gDomAviso"></span></div>
+    <div class="g-linha"><label class="aviso" for="gDom">Data</label><input type="date" id="gDom"><span class="aviso" id="gDomAviso"></span></div>
     <div id="gCultos" class="g-cultos"></div>
     <div class="g-campos">
       <label class="largo">Tema / título <input type="text" id="gTema"></label>
@@ -234,7 +234,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.10.2';
+const VERSAO = '0.11.0';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -914,9 +914,11 @@ async function abrirKtl(){
   $('#ktlAviso').textContent = 'Procurando os cultos de ' + dataBR(dia) + '…';
   try {
     const c = await clienteLogado();
-    const r = await c.rpc('canivete_domingo', { p_hoje: dia });
-    if (r.error) throw r.error;
-    ktlCultos = (r.data || []).filter(x => x.culto && x.domingo === dia);
+    if (new Date(dia + 'T12:00').getDay() === 0){
+      const r = await c.rpc('canivete_domingo', { p_hoje: dia });
+      if (r.error) throw r.error;
+      ktlCultos = (r.data || []).filter(x => x.culto && x.domingo === dia);
+    } else ktlCultos = [];
   } catch (e){ ktlCultos = []; $('#ktlAviso').textContent = 'Não consegui ler o calendário (' + (e.message || e) + '). Dá para salvar como documento avulso.'; }
   const titulo = frasear(atual.titulo);
   let marcado = ktlCultos.findIndex(x => mesmaRef(x.texto, atual.ref));
@@ -953,6 +955,10 @@ async function salvarNoKtl(){
     const verbo = res.acao === 'atualizado' ? 'Atualizei o sermão do' : res.acao === 'criado' ? 'Criei o sermão e liguei ao' : 'Criei um';
     $('#ktlMsg').innerHTML = `Salvo no KTL ✓ ${verbo} ${onde}. Já aparece na Memória.`;
     atual.ktl = { doc: res.documento, quando: Date.now() }; gravarLS('atelie.rascunho', atual);
+    if (!alvo && atual.data && new Date(atual.data + 'T12:00').getDay() !== 0){
+      const o = await c.from('canivete_outros_cultos').update({ documento: res.documento, tema: frasear(atual.titulo), referencia: atual.ref || null, atualizado: new Date().toISOString() }).eq('data', atual.data).select('nome');
+      if (o.data && o.data.length) $('#ktlMsg').innerHTML += ` Ligado ao culto “${esc(o.data[0].nome || 'Culto')}” de ${dataBR(atual.data)}.`;
+    }
   } catch (e){ $('#ktlMsg').textContent = 'Não consegui salvar: ' + (e.message || e); }
   $('#bKtlSalvar').disabled = false;
 }
@@ -1095,14 +1101,19 @@ async function gCarregarCultos(){
   const dom = $('#gDom').value; $('#gCultos').innerHTML = ''; $('#gDomAviso').textContent = 'Carregando os cultos…';
   try {
     const c = await clienteLogado();
-    const r = await c.rpc('canivete_domingo', { p_hoje: dom });
-    if (r.error) throw r.error;
-    gCultos = (r.data || []).filter(x => x.culto && x.domingo === dom);
-    $('#gDomAviso').textContent = gCultos.length ? 'Toque no culto para preencher os dados:' : 'Nenhum culto no calendário para este domingo: preencha os dados abaixo.';
+    if (new Date(dom + 'T12:00').getDay() === 0){
+      const r = await c.rpc('canivete_domingo', { p_hoje: dom });
+      if (r.error) throw r.error;
+      gCultos = (r.data || []).filter(x => x.culto && x.domingo === dom);
+    } else {
+      const r = await c.from('canivete_outros_cultos').select('*').eq('data', dom);
+      gCultos = (r.data || []).map(o => ({ culto: null, outro: true, nome: o.nome, tema: o.tema || '', texto: o.referencia || '', descricao: '', situacao: o.documento ? 'pronto' : 'planejado', escolhido: true }));
+    }
+    $('#gDomAviso').textContent = gCultos.length ? 'Toque no culto para preencher os dados:' : 'Nenhum culto planejado para esta data: preencha os dados abaixo.';
   } catch (e){ gCultos = []; $('#gDomAviso').textContent = 'Não consegui ler os cultos (' + (e.message || e) + ').'; }
   const SIT = { pronto: 'sermão pronto', rascunho: 'rascunho', planejado: 'sem sermão' };
   $('#gCultos').innerHTML = gCultos.map((x, i) => `<button type="button" class="g-culto${G && G.culto === x.culto && G.domingo === dom ? ' ativo' : ''}" data-i="${i}">
-    <small>Culto ${x.culto} · ${esc(SIT[x.situacao] || '')}${x.escolhido ? '' : ' · sugestão do KTL'}</small><b>${esc(x.tema || '(sem tema)')}</b><span>${esc(x.texto || '')}</span></button>`).join('');
+    <small>${x.outro ? esc(x.nome || 'Culto') : 'Culto ' + x.culto} · ${esc(SIT[x.situacao] || '')}${x.escolhido ? '' : ' · sugestão do KTL'}</small><b>${esc(x.tema || '(sem tema)')}</b><span>${esc(x.texto || '')}</span></button>`).join('');
 }
 $('#gCultos').addEventListener('click', e => {
   const b = e.target.closest('.g-culto'); if (!b) return;
@@ -1110,9 +1121,9 @@ $('#gCultos').addEventListener('click', e => {
   if (G && !confirm('Há uma geração em andamento. Trocar de culto descarta o que já foi gerado. Continuar?')) return;
   G = null; gravarLS('atelie.gerando', null); gPassos(); gBotoes(false);
   $('#gTema').value = x.tema || ''; $('#gRef').value = x.texto || ''; $('#gIdeia').value = x.descricao || '';
-  $('#gCultos').dataset.culto = x.culto;
+  $('#gCultos').dataset.culto = x.culto || '';
   document.querySelectorAll('.g-culto').forEach(k => k.classList.toggle('ativo', k === b));
-  $('#gMsg').innerHTML = `<div class="aviso">Culto ${x.culto} escolhido. Confira os dados e toque em “Gerar sermão”.</div>`;
+  $('#gMsg').innerHTML = `<div class="aviso">${x.outro ? esc(x.nome || 'Culto') : 'Culto ' + x.culto} escolhido. Confira os dados e toque em “Gerar sermão”.</div>`;
 });
 
 /* ---------- o que já foi pregado com este texto (Memória) ---------- */
@@ -1240,7 +1251,9 @@ $('#bGerarSermao').onclick = gerarSermao;
 $('#bGerarDescartar').onclick = () => { if (confirm('Descartar a geração em andamento?')){ G = null; gravarLS('atelie.gerando', null); $('#gPassos').innerHTML = ''; $('#gMsg').innerHTML = ''; gBotoes(false); } };
 $('#gDom').addEventListener('change', gCarregarCultos);
 (function iniciarGeracao(){
-  $('#gDom').value = (G && G.domingo) || proximoDomingoISO();
+  const pedida = new URLSearchParams(location.search).get('data');
+  if (pedida && /^\d{4}-\d{2}-\d{2}$/.test(pedida) && atual && atual.data !== pedida && !G) novoSermao();
+  $('#gDom').value = (G && G.domingo) || (pedida && /^\d{4}-\d{2}-\d{2}$/.test(pedida) ? pedida : proximoDomingoISO());
   $('#gPublico').value = (G && G.publico) || 'Congregação da Igreja Vidas, culto de domingo';
   if (G){ $('#gTema').value = G.tema || ''; $('#gRef').value = G.ref || ''; $('#gIdeia').value = G.ideia || ''; $('#gTempo').value = G.tempo || 40; if (G.culto) $('#gCultos').dataset.culto = G.culto;
     gPassos(); if (G.intro) gPasso(0, 'feito'); (G.pontos || []).forEach((p, k) => { if (p && p.exegese) gPasso(1 + k, 'feito'); if (p && p.frase) gPasso(6 + k, 'feito'); }); if (G.conclusao) gPasso(5, 'feito');
