@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.9.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.10.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,11 +33,29 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
 .btn.ouro{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
 .btn:disabled{opacity:.4}
-.entrada{margin-top:22px;border:2px dashed var(--borda);border-radius:18px;padding:28px;text-align:center;background:var(--cartao)}
+[hidden]{display:none!important}
+.entrada{display:block;margin-top:22px;border:2px dashed var(--borda);border-radius:18px;padding:28px;text-align:center;background:var(--cartao)}
 .entrada.arrastando{border-color:var(--ouro)}
 .entrada p{margin:8px 0 0;color:var(--mudo);font-size:14px}
 .barra{position:sticky;top:0;z-index:20;margin-top:18px;padding:10px;border-radius:14px;border:1px solid var(--borda);background:var(--cartao);display:none;flex-wrap:wrap;gap:8px;align-items:center}
 .barra.ativa{display:flex}
+.gerar{margin-top:18px;padding:16px 18px;border-radius:16px;border:1px solid var(--borda);background:var(--cartao)}
+.gerar h2{margin:0 0 6px;font-family:Cinzel,serif;font-size:14px;letter-spacing:2px;color:var(--ouroTexto)}
+.g-linha{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.gerar input,.gerar textarea{font:inherit;color:var(--texto);background:var(--cartao2);border:1px solid var(--borda);border-radius:10px;padding:9px 10px;color-scheme:dark}
+[data-tema="claro"] .gerar input,[data-tema="claro"] .gerar textarea{color-scheme:light}
+.g-cultos{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-bottom:10px}
+.g-culto{text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao2);color:var(--texto);display:flex;flex-direction:column;gap:3px;font:inherit;cursor:pointer}
+.g-culto.ativo{border-color:var(--ouro);box-shadow:0 0 0 2px var(--ouro) inset}
+.g-culto small{color:var(--ouroTexto);font-weight:600}.g-culto span{color:var(--mudo);font-size:13px}
+.g-campos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.g-campos label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mudo)}
+.g-campos .largo{grid-column:1/-1}
+.g-campos textarea{min-height:56px;resize:vertical}
+.g-botoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.g-passos{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.g-passos li::before{content:'○ ';color:var(--mudo)} .g-passos li.feito::before{content:'✓ ';color:#7FC79A} .g-passos li.indo::before{content:'◔ ';color:var(--ouroTexto)} .g-passos li.falhou::before{content:'✗ ';color:#E58B7A}
+.g-ou{text-align:center;margin:16px 0 0}
 .ktl-painel{display:none;margin-top:12px;padding:14px 16px;border-radius:14px;border:1px solid var(--ouro);background:var(--cartao)}
 .ktl-painel.ativa{display:block}
 .ktl-painel h2{margin:0 0 6px;font-family:Cinzel,serif;font-size:14px;letter-spacing:2px;color:var(--ouroTexto)}
@@ -129,6 +147,24 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     </div>
   </header>
 
+  <section class="gerar" id="gerarSec" aria-labelledby="hGerar">
+    <h2 id="hGerar">GERAR O SERMÃO COM IA</h2>
+    <p class="aviso">Com o seu prompt de sermões. A Memória entra junto: a IA vê o que você já pregou com o mesmo texto, para não repetir.</p>
+    <div class="g-linha"><label class="aviso" for="gDom">Domingo</label><input type="date" id="gDom"><span class="aviso" id="gDomAviso"></span></div>
+    <div id="gCultos" class="g-cultos"></div>
+    <div class="g-campos">
+      <label class="largo">Tema / título <input type="text" id="gTema"></label>
+      <label>Texto bíblico <input type="text" id="gRef"></label>
+      <label>Tempo (minutos) <input type="number" id="gTempo" min="15" value="40"></label>
+      <label class="largo">Ideia central (Big Idea) <textarea id="gIdeia" placeholder="Deixe em branco para a IA definir a partir do texto"></textarea></label>
+      <label class="largo">Público-alvo <input type="text" id="gPublico"></label>
+    </div>
+    <div class="g-botoes"><button class="btn ouro" type="button" id="bGerarSermao">Gerar sermão</button><button class="btn" type="button" id="bGerarDescartar" hidden>Descartar a geração</button></div>
+    <ol class="g-passos" id="gPassos"></ol>
+    <div id="gMsg" aria-live="polite"></div>
+    <p class="aviso g-ou">— ou, se o sermão já foi gerado fora (Adapta) —</p>
+  </section>
+
   <label class="entrada" id="entrada" for="arquivo">
     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v6M9 15l3-3 3 3"/></svg>
     <div style="font-size:17px;font-weight:600;margin-top:6px">Escolher o DOCX gerado pela IA</div>
@@ -197,7 +233,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.9.1';
+const VERSAO = '0.10.0';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -316,6 +352,7 @@ function mostrar(){
   $('#folha').classList.toggle('ativa', tem);
   $('#barra').classList.toggle('ativa', tem);
   $('#entrada').style.display = tem ? 'none' : '';
+  $('#gerarSec').style.display = tem ? 'none' : '';
   if (tem){ if (!atual.data) atual.data = proximoDomingoISO(); $('#dataPreg').value = atual.data; }
 }
 async function abrirArquivo(f){
@@ -889,10 +926,11 @@ async function salvarNoKtl(){
     const c = await clienteLogado();
     const r = await c.rpc('canivete_salvar_sermao', {
       p_domingo: atual.data || null, p_culto: alvo ? alvo.culto : null,
-      p_titulo: frasear(atual.titulo), p_ref: atual.ref || '', p_conteudo: await folhaParaTexto()
+      p_titulo: frasear(atual.titulo), p_ref: atual.ref || '', p_conteudo: await folhaParaTexto(),
+      p_descricao: (lerFolha().bigIdea || '').slice(0, 400), p_pontos: lerFolha().pontos.map(p => p.titulo.toUpperCase())
     });
     if (r.error){
-      if (/canivete_salvar_sermao|function/i.test(r.error.message || '')) throw new Error('falta rodar no Supabase o arquivo canivete_salvar.sql.');
+      if (/canivete_salvar_sermao|function/i.test(r.error.message || '')) throw new Error('falta rodar no Supabase o arquivo canivete_salvar2.sql.');
       throw r.error;
     }
     const res = (r.data || [])[0] || {};
@@ -918,6 +956,280 @@ if (atual && atual.slides){ $('#slidesSec').classList.add('ativa'); pintarSlides
 if (atual) $('#msg').innerHTML = `<div class="aviso">Continuando a revisão de “${esc(atual.titulo)}”.</div>`;
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
+
+/* =====================================================================
+   7. GERAR O SERMÃO COM IA — o prompt de sermões do Bispo, em partes curtas
+   plano + introdução → (4 exegeses + conclusão, ao mesmo tempo) → (4 ilustrações/aplicações, ao mesmo tempo)
+   O resultado passa pela mesma diagramação do DOCX da Adapta.
+   ===================================================================== */
+const G_IA = 'https://promptflow-ia.eneaspr.workers.dev';
+const G_MODELO = 'claude-sonnet-5-5';
+const PROMPT_SERMAO = `Aja como um teólogo cristão experiente, expositor bíblico e pregador com sólida formação nas tradições batista e pentecostal, com domínio avançado de hermenêutica, exegese e homilética, e grande habilidade em comunicação clara, pastoral e inspiradora.
+
+Sua tarefa é elaborar um sermão completo, profundamente bíblico, expositivo e aplicável, mantendo equilíbrio entre profundidade teológica e acessibilidade para ouvintes leigos.
+
+OBJETIVO DO SERMÃO — O sermão DEVE: ser fiel ao texto bíblico; estar alinhado à teologia cristã (com coerência batista e pentecostal); demonstrar profundidade teológica (histórica, gramatical e espiritual); explicar termos técnicos, gregos, hebraicos ou aramaicos sempre de forma simples e compreensível; ser claro, envolvente e acessível para pessoas leigas; ter progressão lógica clara (unidade, ordem, proporção e progresso); conduzir o ouvinte a transformação prática, não apenas informação.
+
+ESTRUTURA OBRIGATÓRIA
+INTRODUÇÃO — aproximadamente 150 palavras; criativa, envolvente e conectada com a vida real; pode usar metáfora, pergunta, contraste ou narrativa; apresentar o tema de forma natural; conduzir diretamente à ideia central; gerar interesse imediato.
+DESENVOLVIMENTO (4 PONTOS PRINCIPAIS) — cada ponto DEVE conter: título forte, claro e impactante; exegese completa (histórica: contexto da época; gramatical: análise de palavras-chave, explicadas de forma simples; teológica: significado espiritual profundo); ilustração (analogia prática, história ou imagem mental clara, que facilite o entendimento do ponto); aplicação (direta, prática e confrontadora, voltada para a vida do ouvinte, levando à reflexão e mudança real); frase de impacto (uma frase forte, memorável e pregável).
+CONCLUSÃO — aproximadamente 150 palavras; recapitular os pontos principais de forma progressiva; reforçar a ideia central; criar senso de urgência espiritual; NÃO introduzir novas ideias.
+
+DIRETRIZES DE ESTILO: linguagem clara, acessível e pastoral; evitar termos excessivamente técnicos sem explicação; manter profundidade sem perder simplicidade; usar versículos de apoio quando necessário; incluir ocasionalmente citações de teólogos relevantes (ex.: Agostinho, Lutero, Calvino, Spurgeon), de forma natural; criar conexão emocional e espiritual com o ouvinte; evitar superficialidade.
+DIFERENCIAIS OBRIGATÓRIOS: inserir frases de impacto ao longo do sermão; garantir que o sermão seja totalmente pregável (não apenas teórico); priorizar transformação espiritual acima de informação.
+FORMATO FINAL: escrita fluida, natural e com ritmo de pregação.
+
+REGRAS DE SAÍDA (obrigatórias): Português do Brasil. Parágrafos curtos, de 1 a 3 frases. Nada de Markdown (#, *, **). Citações bíblicas entre aspas, com a referência entre parênteses. Siga exatamente o formato de resposta pedido no fim de cada pedido.`;
+
+/* pede à IA; se a resposta vier cortada (pelo tamanho ou sem o fim esperado), pede a continuação */
+async function gBruto(pedido, maxTokens, completa){
+  let txt = '';
+  for (let volta = 0; volta < 5; volta++){
+    const msgs = [{ role: 'user', content: PROMPT_SERMAO + '\n\n---\n\n' + pedido }];
+    if (txt) msgs.push({ role: 'assistant', content: txt.replace(/\s+$/, '') }, { role: 'user', content: 'A resposta foi cortada. Continue EXATAMENTE de onde parou, sem repetir nada e sem nenhum comentário.' });
+    const r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs }) });
+    const bruto = await r.text();
+    let j; try { j = JSON.parse(bruto); } catch { throw new Error(r.ok ? 'o servidor da IA devolveu uma resposta vazia' : 'o servidor da IA respondeu com erro ' + r.status); }
+    if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('erro ' + r.status));
+    txt += (j.content || []).map(c => c.text || '').join('');
+    gravarLS('atelie.ultimaIA', { quando: new Date().toISOString(), stop: j.stop_reason, texto: txt.slice(-4000) });
+    if (j.stop_reason !== 'max_tokens' && completa(txt.replace(/\s+$/, ''))) break;
+  }
+  if (!txt.trim()) throw new Error('a IA devolveu uma resposta em branco');
+  return txt;
+}
+function gJSONtolerante(t){
+  try { return JSON.parse(t); } catch {}
+  let out = '', dentro = false, esc2 = false;
+  for (const ch of t){
+    if (dentro){
+      if (esc2){ out += ch; esc2 = false; continue; }
+      if (ch === '\\'){ out += ch; esc2 = true; continue; }
+      if (ch === '"'){ out += ch; dentro = false; continue; }
+      if (ch === '\n'){ out += '\\n'; continue; }
+      if (ch < ' ') continue;
+      out += ch;
+    } else { if (ch === '"') dentro = true; out += ch; }
+  }
+  return JSON.parse(out.replace(/,\s*([\]}])/g, '$1'));
+}
+async function gJSON(pedido, maxTokens){
+  let erro;
+  for (let t = 0; t < 2; t++){
+    try {
+      const txt = await gBruto(pedido + '\n\nResponda SOMENTE com o objeto JSON válido, sem texto antes ou depois e sem crases.', maxTokens, x => /\}\s*(```)?$/.test(x));
+      const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+      if (a < 0 || b < a) throw new Error('a resposta da IA veio fora do formato');
+      return gJSONtolerante(txt.slice(a, b + 1));
+    } catch (e){ erro = e; }
+  }
+  throw erro;
+}
+const gLimpa = l => l.trim().replace(/^#+\s*/, '').replace(/\*\*/g, '').replace(/^[*_-]\s+/, '').trim();
+/* texto simples em parágrafos; com marcadores opcionais (ILUSTRAÇÃO:, APLICAÇÃO:, FRASE:) */
+async function gTexto(pedido, maxTokens, comMarcas){
+  const formato = comMarcas
+    ? `\n\nResponda em TEXTO SIMPLES, sem Markdown e sem comentários, um parágrafo por linha, exatamente nesta ordem:\nILUSTRAÇÃO:\n(os parágrafos da ilustração)\nAPLICAÇÃO:\n(os parágrafos da aplicação)\nFRASE: a frase de impacto do ponto`
+    : `\n\nResponda em TEXTO SIMPLES, sem Markdown, sem título e sem comentários antes ou depois. Um parágrafo por linha.`;
+  const completa = comMarcas ? x => /FRASE[^:\n]*:\s*\S.*[.!?"”)]$/i.test(x.replace(/\*\*/g, '')) : x => /[.!?"”)…:]$/.test(x);
+  let erro;
+  for (let t = 0; t < 2; t++){
+    try {
+      const txt = await gBruto(pedido + formato, maxTokens, completa);
+      const out = { paragrafos: [], ilustracao: [], aplicacao: [], frase: '' };
+      let alvo = comMarcas ? 'ilustracao' : 'paragrafos';
+      txt.replace(/\r/g, '').split('\n').forEach(l => {
+        const x = gLimpa(l); if (!x || /^```/.test(x)) return;
+        let m;
+        if (comMarcas && (m = x.match(/^ilustra[çc][ãa]o\s*:\s*(.*)$/i))){ alvo = 'ilustracao'; if (m[1]) out.ilustracao.push(m[1]); return; }
+        if (comMarcas && (m = x.match(/^aplica[çc][ãa]o\s*:\s*(.*)$/i))){ alvo = 'aplicacao'; if (m[1]) out.aplicacao.push(m[1]); return; }
+        if (comMarcas && (m = x.match(/^frase(?: de impacto)?\s*:\s*(.*)$/i))){ alvo = 'frase'; out.frase = m[1]; return; }
+        if (/^(t[íi]tulo|ponto \d|conclus[ãa]o|introdu[çc][ãa]o)\s*[:–-]?\s*$/i.test(x)) return;
+        if (alvo === 'frase') out.frase = (out.frase + ' ' + x).trim(); else out[alvo].push(x);
+      });
+      out.frase = out.frase.trim().replace(/^["“”']+|["“”']+$/g, '').trim();
+      const palavras = [...out.paragrafos, ...out.ilustracao, ...out.aplicacao].join(' ').split(/\s+/).length;
+      if (palavras < 50) throw new Error('a resposta da IA veio curta demais');
+      if (comMarcas && (!out.frase || !out.aplicacao.length)) throw new Error('a resposta veio sem a aplicação ou sem a frase de impacto');
+      return out;
+    } catch (e){ erro = e; }
+  }
+  throw erro;
+}
+
+/* ---------- estado (fica salvo neste aparelho: dá para continuar de onde parou) ---------- */
+let G = lerLS('atelie.gerando', null);
+const gGuardar = () => gravarLS('atelie.gerando', G);
+const G_NOMES = ['Plano do sermão e introdução', 'Ponto 1 · exegese', 'Ponto 2 · exegese', 'Ponto 3 · exegese', 'Ponto 4 · exegese', 'Conclusão',
+  'Ponto 1 · ilustração e aplicação', 'Ponto 2 · ilustração e aplicação', 'Ponto 3 · ilustração e aplicação', 'Ponto 4 · ilustração e aplicação'];
+function gPassos(){ $('#gPassos').innerHTML = G_NOMES.map((n, i) => `<li id="gp${i}">${esc(n)}</li>`).join(''); }
+function gPasso(i, est){ const el = $('#gp' + i); if (el) el.className = est; }
+function gBotoes(rodando){
+  $('#bGerarSermao').disabled = rodando;
+  $('#bGerarSermao').textContent = G ? 'Continuar a geração' : 'Gerar sermão';
+  $('#bGerarDescartar').hidden = !G || rodando;
+}
+
+/* ---------- cultos do domingo (do Planejar / calendário do KTL) ---------- */
+let gCultos = [];
+async function gCarregarCultos(){
+  const dom = $('#gDom').value; $('#gCultos').innerHTML = ''; $('#gDomAviso').textContent = 'Carregando os cultos…';
+  try {
+    const c = await clienteLogado();
+    const r = await c.rpc('canivete_domingo', { p_hoje: dom });
+    if (r.error) throw r.error;
+    gCultos = (r.data || []).filter(x => x.culto && x.domingo === dom);
+    $('#gDomAviso').textContent = gCultos.length ? 'Toque no culto para preencher os dados:' : 'Nenhum culto no calendário para este domingo: preencha os dados abaixo.';
+  } catch (e){ gCultos = []; $('#gDomAviso').textContent = 'Não consegui ler os cultos (' + (e.message || e) + ').'; }
+  const SIT = { pronto: 'sermão pronto', rascunho: 'rascunho', planejado: 'sem sermão' };
+  $('#gCultos').innerHTML = gCultos.map((x, i) => `<button type="button" class="g-culto${G && G.culto === x.culto && G.domingo === dom ? ' ativo' : ''}" data-i="${i}">
+    <small>Culto ${x.culto} · ${esc(SIT[x.situacao] || '')}${x.escolhido ? '' : ' · sugestão do KTL'}</small><b>${esc(x.tema || '(sem tema)')}</b><span>${esc(x.texto || '')}</span></button>`).join('');
+}
+$('#gCultos').addEventListener('click', e => {
+  const b = e.target.closest('.g-culto'); if (!b) return;
+  const x = gCultos[+b.dataset.i];
+  if (G && !confirm('Há uma geração em andamento. Trocar de culto descarta o que já foi gerado. Continuar?')) return;
+  G = null; gravarLS('atelie.gerando', null); gPassos(); gBotoes(false);
+  $('#gTema').value = x.tema || ''; $('#gRef').value = x.texto || ''; $('#gIdeia').value = x.descricao || '';
+  $('#gCultos').dataset.culto = x.culto;
+  document.querySelectorAll('.g-culto').forEach(k => k.classList.toggle('ativo', k === b));
+  $('#gMsg').innerHTML = `<div class="aviso">Culto ${x.culto} escolhido. Confira os dados e toque em “Gerar sermão”.</div>`;
+});
+
+/* ---------- o que já foi pregado com este texto (Memória) ---------- */
+async function gContextoMemoria(ref, tema){
+  try {
+    const c = await clienteLogado();
+    const r = await c.rpc('memoria_buscar', { q: ref || tema, limite: 40 });
+    const ja = (r.data || []).filter(x => x.tipo === 'sermao' && x.motivo === 'texto').slice(0, 6);
+    if (!ja.length) return '';
+    let txt = 'O BISPO JÁ PREGOU SOBRE ESTE TEXTO (não repita os mesmos títulos de pontos nem as mesmas ilustrações; traga uma abordagem nova):\n';
+    txt += ja.map(x => `- "${x.titulo}" (${x.referencia || ''}, ${x.quando || ''})`).join('\n');
+    for (const x of ja.slice(0, 2)){
+      const d = await c.rpc('memoria_documento', { p_id: x.documento });
+      const doc = (d.data || [])[0];
+      if (doc && doc.conteudo) txt += `\n\nTrecho de "${x.titulo}":\n${String(doc.conteudo).replace(/\s+\n/g, '\n').slice(0, 1200)}`;
+    }
+    return txt;
+  } catch { return ''; }
+}
+
+function gDados(){
+  return `DADOS DO SERMÃO
+Tema: ${G.tema || '(defina a partir do texto)'}
+Texto bíblico: ${G.ref || '(sugira o mais adequado)'}
+Ideia central (Big Idea): ${G.ideia || '(defina a partir do texto)'}
+Tempo de duração aproximado: ${G.tempo} minutos
+Público-alvo: ${G.publico}`;
+}
+const gPlano = () => `PLANO JÁ DEFINIDO:\nTítulo: ${G.titulo}\nIdeia central: ${G.big_idea}\nTexto: ${G.ref}\nPontos:\n${G.plano.map((p, k) => `${k + 1}. ${p.titulo} — ${p.foco}`).join('\n')}`;
+
+async function gParalelo(tarefas){
+  tarefas.forEach(t => gPasso(t.i, 'indo'));
+  const res = await Promise.allSettled(tarefas.map(t => t.fn().then(() => { gPasso(t.i, 'feito'); gGuardar(); })));
+  let primeiro = null;
+  res.forEach((r, n) => { if (r.status === 'rejected'){ gPasso(tarefas[n].i, 'falhou'); if (!primeiro) primeiro = { i: tarefas[n].i, e: r.reason }; } });
+  if (primeiro){ const e = primeiro.e; e.passo = primeiro.i; throw e; }
+}
+
+async function gerarSermao(){
+  if (!G){
+    const tema = $('#gTema').value.trim(), ref = $('#gRef').value.trim();
+    if (!tema && !ref){ $('#gMsg').innerHTML = '<div class="erro">Escolha um culto ou preencha o tema e o texto.</div>'; return; }
+    G = { domingo: $('#gDom').value, culto: +($('#gCultos').dataset.culto || 0) || null, tema, ref, ideia: $('#gIdeia').value.trim(),
+          tempo: +$('#gTempo').value || 40, publico: $('#gPublico').value.trim() || 'Congregação da Igreja Vidas, culto de domingo', pontos: [] };
+    gGuardar();
+  }
+  gPassos(); gBotoes(true);
+  if (G.intro) gPasso(0, 'feito');
+  G.pontos.forEach((p, k) => { if (p && p.exegese) gPasso(1 + k, 'feito'); if (p && p.frase) gPasso(6 + k, 'feito'); });
+  if (G.conclusao) gPasso(5, 'feito');
+  $('#gMsg').innerHTML = `<div class="aviso">${G.intro ? 'Continuando de onde parou…' : 'Gerando… leva uns 3 minutos. Pode deixar esta tela aberta.'}</div>`;
+  let passo = 0;
+  try {
+    if (G.memoria == null){ G.memoria = await gContextoMemoria(G.ref, G.tema); gGuardar(); }
+    if (!G.intro){
+      passo = 0; gPasso(0, 'indo');
+      const p0 = await gJSON(gDados() + (G.memoria ? '\n\n' + G.memoria : '') + `
+
+Primeiro, planeje o sermão e escreva a INTRODUÇÃO (cerca de 150 palavras). Formato:
+{"titulo": "título do sermão, de 2 a 7 palavras",
+ "big_idea": "a ideia central em uma frase",
+ "pontos": [{"titulo": "TÍTULO FORTE DO PONTO", "foco": "que parte do texto o ponto explica e qual é a ênfase"}, {…}, {…}, {…}],
+ "introducao": ["parágrafo", "…"]}`, 1800);
+      G.titulo = String(p0.titulo || G.tema || '').trim(); G.big_idea = String(p0.big_idea || G.ideia || '').trim();
+      G.plano = (p0.pontos || []).slice(0, 4).map(p => ({ titulo: String(p.titulo || '').toUpperCase(), foco: String(p.foco || '') }));
+      while (G.plano.length < 4) G.plano.push({ titulo: 'PONTO ' + (G.plano.length + 1), foco: '' });
+      G.intro = (Array.isArray(p0.introducao) ? p0.introducao : String(p0.introducao || '').split(/\n+/)).map(x => String(x).trim()).filter(Boolean);
+      gPasso(0, 'feito'); gGuardar();
+    }
+    const exegese = k => async () => {
+      const r = await gTexto(gDados() + '\n\n' + gPlano() + `
+
+Escreva a EXEGESE do PONTO ${k + 1}: "${G.plano[k].titulo}" (${G.plano[k].foco}). Entre 350 e 450 palavras: contexto histórico da época, análise de palavras-chave (grego, hebraico ou aramaico explicados de forma simples) e significado teológico. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.${k ? ' Comece com uma frase de transição que ligue ao ponto anterior ("' + G.plano[k - 1].titulo + '").' : ''}`, 1600, false);
+      G.pontos[k] = { ...(G.pontos[k] || {}), titulo: G.plano[k].titulo, exegese: r.paragrafos };
+    };
+    const conclusao = async () => {
+      const r = await gTexto(gDados() + '\n\n' + gPlano() + `
+
+Escreva somente a CONCLUSÃO do sermão: cerca de 150 palavras, recapitulando os 4 pontos de forma progressiva, reforçando a ideia central e criando senso de urgência espiritual, sem ideias novas.`, 900, false);
+      G.conclusao = r.paragrafos;
+    };
+    const aplicacao = k => async () => {
+      const pt = G.pontos[k];
+      const r = await gTexto(gDados() + '\n\n' + gPlano() + `
+
+PONTO ${k + 1}: "${pt.titulo}". A exegese já está escrita e termina assim: "${pt.exegese.slice(-2).join(' ')}"
+
+Agora escreva, continuando naturalmente: a ILUSTRAÇÃO deste ponto (analogia prática, história ou imagem mental clara, de 120 a 200 palavras) e a APLICAÇÃO (direta, prática e confrontadora, voltada para a vida do ouvinte, de 180 a 260 palavras). Depois, a FRASE de impacto do ponto (forte, memorável e pregável).`, 1500, true);
+      pt.ilustracao = r.ilustracao; pt.aplicacao = r.aplicacao; pt.frase = r.frase;
+    };
+    const r1 = [0, 1, 2, 3].filter(k => !(G.pontos[k] && G.pontos[k].exegese)).map(k => ({ i: 1 + k, fn: exegese(k) }));
+    if (!G.conclusao) r1.push({ i: 5, fn: conclusao });
+    await gParalelo(r1);
+    await gParalelo([0, 1, 2, 3].filter(k => !G.pontos[k].frase).map(k => ({ i: 6 + k, fn: aplicacao(k) })));
+    gFinalizar();
+  } catch (e){
+    const n = e.passo != null ? e.passo : passo;
+    if (e.passo == null) gPasso(n, 'falhou');
+    $('#gMsg').innerHTML = `<div class="erro">Parou em “${esc(G_NOMES[n])}”: ${esc(e.message || e)}. O que já ficou pronto está guardado: toque em “Continuar a geração”.</div>`;
+  }
+  gBotoes(false);
+}
+
+/* monta o sermão no mesmo formato do DOCX da Adapta e passa pela diagramação de sempre */
+function gFinalizar(){
+  const P = t => `<p>${esc(t)}</p>`;
+  let h = P(G.titulo) + P('TEXTO: ' + G.ref) + P('Big Idea: ' + G.big_idea) + P('INTRODUÇÃO') + G.intro.map(P).join('');
+  G.pontos.forEach((pt, k) => {
+    h += P(`${k + 1}. ${pt.titulo}`) + P('Exegese') + pt.exegese.map(P).join('');
+    if (pt.ilustracao.length) h += P('Ilustração') + pt.ilustracao.map(P).join('');
+    h += P('Aplicação') + pt.aplicacao.map(P).join('');
+    if (pt.frase) h += P('Frase de impacto') + P(pt.frase);
+  });
+  h += P('CONCLUSÃO') + G.conclusao.map(P).join('');
+  const d = diagramar(h);
+  atual = { ...d, nome: 'Gerado no Canivete', data: G.domingo || proximoDomingoISO(), culto: G.culto, gerado: true };
+  gravarLS('atelie.rascunho', atual);
+  G = null; gravarLS('atelie.gerando', null);
+  $('#msg').innerHTML = `<div class="aviso">Sermão gerado: “${esc(d.titulo)}” · ${esc(d.ref)}. Revise na folha; depois gere os slides, salve no KTL e envie ao Pregador.</div>`;
+  mostrar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+$('#bGerarSermao').onclick = gerarSermao;
+$('#bGerarDescartar').onclick = () => { if (confirm('Descartar a geração em andamento?')){ G = null; gravarLS('atelie.gerando', null); $('#gPassos').innerHTML = ''; $('#gMsg').innerHTML = ''; gBotoes(false); } };
+$('#gDom').addEventListener('change', gCarregarCultos);
+(function iniciarGeracao(){
+  $('#gDom').value = (G && G.domingo) || proximoDomingoISO();
+  $('#gPublico').value = (G && G.publico) || 'Congregação da Igreja Vidas, culto de domingo';
+  if (G){ $('#gTema').value = G.tema || ''; $('#gRef').value = G.ref || ''; $('#gIdeia').value = G.ideia || ''; $('#gTempo').value = G.tempo || 40; if (G.culto) $('#gCultos').dataset.culto = G.culto;
+    gPassos(); if (G.intro) gPasso(0, 'feito'); (G.pontos || []).forEach((p, k) => { if (p && p.exegese) gPasso(1 + k, 'feito'); if (p && p.frase) gPasso(6 + k, 'feito'); }); if (G.conclusao) gPasso(5, 'feito');
+    $('#gMsg').innerHTML = '<div class="aviso">Há uma geração interrompida guardada: toque em “Continuar a geração”.</div>'; }
+  gBotoes(false);
+  if (!(atual && atual.html)) gCarregarCultos();
+})();
+
 </script>
 </body>
 </html>
