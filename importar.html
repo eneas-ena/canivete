@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Levar para a Memória" data-versao="0.13.0"></script>
+<script src="porteiro.js" data-app="Levar para a Memória" data-versao="0.13.1"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -94,7 +94,7 @@ th{color:var(--mudo);font-weight:500;font-size:12px;letter-spacing:1px;text-tran
   <!-- 2. PESQUISAS -->
   <section class="cartao" aria-labelledby="h2a">
     <h2 id="h2a">PESQUISAS GUARDADAS</h2>
-    <p class="aviso">Os <b>favoritos</b> do Teólogo de Bolso e do Teologia em Minutos (os que estão sincronizados). Pode tocar de novo sempre que favoritar coisas novas.</p>
+    <p class="aviso">No <b>Teólogo de Bolso</b> e no <b>Teologia em Minutos</b>, abra a tela de <b>Favoritos</b> e toque em <b>“Levar para a Memória do Canivete”</b>: os favoritos e o histórico daquele aparelho vêm para cá. Pode repetir sempre que quiser (o que já veio só é atualizado).</p>
     <div class="botoes"><button class="btn ouro" type="button" id="bFav">Trazer os favoritos</button><span id="fMsg" class="aviso" aria-live="polite"></span></div>
     <p class="aviso" id="histInfo" style="margin-top:14px"></p>
     <div class="botoes" id="histBotoes" hidden><button class="btn" type="button" id="bHist">Trazer também o histórico do Teólogo de Bolso</button><span id="hMsg" class="aviso" aria-live="polite"></span></div>
@@ -108,7 +108,7 @@ th{color:var(--mudo);font-weight:500;font-size:12px;letter-spacing:1px;text-tran
 </div>
 
 <script>
-const VERSAO = '0.13.0';
+const VERSAO = '0.13.1';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const $ = s => document.querySelector(s);
@@ -257,7 +257,7 @@ $('#bFav').onclick = async () => {
     const r = await c.rpc('memoria_importar_favoritos');
     if (r.error) throw r.error;
     const L = r.data || [];
-    $('#fMsg').innerHTML = L.length ? `<span class="ok">Pronto ✓ ${L.map(x => `${esc(x.origem)}: ${x.importados}`).join(' · ')}</span>` : 'Não achei os favoritos sincronizados no banco (talvez eles fiquem em outro projeto).';
+    $('#fMsg').innerHTML = L.length ? `<span class="ok">Pronto ✓ ${L.map(x => `${esc(x.origem)}: ${x.importados}`).join(' · ')}</span>` : 'Os favoritos sincronizados ficam em outro banco. Use o botão <b>“Levar para a Memória do Canivete”</b>, na tela de Favoritos de cada app.';
     carregarResumo();
   } catch (e){ $('#fMsg').innerHTML = `<span class="erro">${faltaSQL(e) ? 'Falta rodar no Supabase o arquivo memoria_etapa2.sql.' : esc(e.message || e)}</span>`; }
   $('#bFav').disabled = false;
