@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.5.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.6.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,7 +54,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .folha li{margin:0 0 3px}
 .folha li.branco{list-style:none}
 .salvo{font-size:12px;color:var(--mudo);min-width:110px}
-.folha .rot-ilus{color:#AB7942;font-weight:700;font-size:13px;margin:10px 0 2px;text-align:left}
+.folha .rot-ilus{color:#AB7942;font-style:italic;font-size:13px;margin:10px 0 2px;text-align:left}
 .folha .frase{text-align:center;font-weight:700;margin:14px 0}
 .folha .frase span{background:#FFFF00}
 .folha .nota-cortado{display:none}
@@ -85,8 +85,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .sl .abre{font-size:4.6cqw;font-weight:700;line-height:1.15;margin-top:3cqw}
 .sl .ref-claro{font-size:1.9cqw;margin-top:auto;opacity:.7}
 .sl .num{font-size:7cqw;font-weight:700;color:var(--s-acento);line-height:1}
-.sl .t-ponto{font-size:5cqw;font-weight:700;line-height:1.12;margin-top:auto}
-.sl .subref{font-size:2cqw;font-weight:700;color:var(--s-acento);margin-top:4cqw}
+.sl .t-ponto{font-size:5cqw;font-weight:700;line-height:1.12;margin-top:2.5cqw}
+.sl .subref{font-size:2cqw;font-weight:700;color:var(--s-acento);margin-top:2.5cqw}
 .sl .meio{position:absolute;inset:8% 7%;display:flex;align-items:center;justify-content:center;text-align:center}
 .sl .frase-s{font-size:4.8cqw;font-weight:700;line-height:1.2}
 .sl .t-conc{font-size:3.2cqw;font-weight:700;color:var(--s-acento-claro)}
@@ -135,6 +135,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <button class="btn" type="button" id="bOutro">Outro arquivo</button>
     <button class="btn" type="button" id="bSlides">Gerar slides</button>
     <button class="btn ouro" type="button" id="bBaixar">Baixar DOCX</button>
+    <button class="btn" type="button" id="bEnviar2" title="Manda o sermão (e os slides, se já gerados) direto para o Pregador">Enviar ao Pregador</button>
   </div>
 
   <article class="folha" id="folha" contenteditable="true" spellcheck="true" aria-label="Sermão diagramado"></article>
@@ -151,9 +152,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <div class="grade-slides" id="gradeSlides"></div>
     <div class="botoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
       <button class="btn" type="button" id="bRefazer">Refazer slides</button>
-      <button class="btn ouro" type="button" id="bPdf">Baixar PDF dos slides</button>
+      <button class="btn" type="button" id="bPdf">Baixar PDF dos slides</button>
+      <button class="btn ouro" type="button" id="bEnviar">Enviar ao Pregador</button>
     </div>
-    <p class="aviso">Toque em qualquer texto de um slide para corrigir. O PDF tem uma página por slide, pronto para o Pregador.</p>
+    <p class="aviso">Toque em qualquer texto de um slide para corrigir. “Enviar ao Pregador” abre o Pregador com um sermão novo já preenchido: Word, slides, título, data e texto base. É só conferir e salvar.</p>
   </section>
 
 </div>
@@ -170,7 +172,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.5.0';
+const VERSAO = '0.6.0';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -367,10 +369,19 @@ function runs(D, el, base){
   })(el, base || {});
   return out;
 }
+function baixarBlob(blob, nome){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
 async function baixar(){
   const btn = $('#bBaixar'); btn.disabled = true; btn.textContent = 'Gerando…';
+  try { const { blob, nome } = await docxBlob(); baixarBlob(blob, nome); $('#msg').innerHTML = `<div class="aviso">DOCX gerado: ${esc(nome)}</div>`; }
+  catch (e){ $('#msg').innerHTML = `<div class="erro">Não consegui gerar o DOCX: ${esc(e.message || e)}</div>`; }
+  btn.disabled = false; btn.textContent = 'Baixar DOCX';
+}
+async function docxBlob(){
   clearTimeout(tSalvar); if (atual){ atual.html = $('#folha').innerHTML; gravarLS('atelie.rascunho', atual); }
-  try {
+  {
     const D = await carregarDocx();
     const { Document, Paragraph, TextRun, AlignmentType, Packer, LevelFormat, HighlightColor, UnderlineType } = D;
     const filhos = [], vazio = () => new Paragraph({ children: [] });
@@ -386,7 +397,7 @@ async function baixar(){
       } else if (c.contains('secao')){
         filhos.push(vazio(), new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: el.textContent.trim(), bold: true, size: 28, color: BRONZE })] }));
       } else if (c.contains('rot-ilus')){
-        filhos.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 120 }, children: [new TextRun({ text: 'Ilustração', bold: true, size: 20, color: BRONZE })] }));
+        filhos.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 120 }, children: [new TextRun({ text: 'Ilustração', italics: true, size: 20, color: BRONZE })] }));
       } else if (c.contains('frase')){
         filhos.push(vazio(), new Paragraph({ alignment: AlignmentType.CENTER, children: runs(D, el, { bold: true, highlight: 'yellow' }) }), vazio());
       } else if (el.nodeName === 'UL'){
@@ -410,11 +421,8 @@ async function baixar(){
     });
     const blob = await Packer.toBlob(doc);
     const nome = `${(atual && atual.titulo ? atual.titulo.toUpperCase() : 'SERMÃO')}${atual && atual.ref ? ' - ' + atual.ref.replace(/:/g, '.') : ''}.docx`.replace(/[\\/?%*|"<>]/g, '');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome;
-    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
-    $('#msg').innerHTML = `<div class="aviso">DOCX gerado: ${esc(nome)}</div>`;
-  } catch (e){ $('#msg').innerHTML = `<div class="erro">Não consegui gerar o DOCX: ${esc(e.message || e)}</div>`; }
-  btn.disabled = false; btn.textContent = 'Baixar DOCX';
+    return { blob, nome };
+  }
 }
 $('#bBaixar').onclick = baixar;
 
@@ -599,7 +607,7 @@ function pintarSlides(){
     if (s.tipo === 'capa') h = `<div class="cx" style="justify-content:center"><div class="barrinha"></div>${ed(i, 'titulo', esc(s.titulo), 't-capa')}${ed(i, 'ref', esc(s.ref), 'ref')}</div>`;
     if (s.tipo === 'texto') h = `<div class="cx">${s.versos.map((v, k) => `<div class="vers" contenteditable="true" data-c="${i}|v${k}"><sup>${v.n}</sup> ${esc(v.t)}</div>`).join('')}</div>`;
     if (s.tipo === 'abertura') h = `<div class="cx">${ed(i, 'rotulo', esc(s.rotulo), 'rot')}${ed(i, 'texto', esc(s.texto), 'abre')}${ed(i, 'ref', esc(s.ref), 'ref-claro')}</div>`;
-    if (s.tipo === 'ponto') h = `<div class="cx">${ed(i, 'num', esc(s.num), 'num')}${ed(i, 'titulo', esc(s.titulo), 't-ponto')}${ed(i, 'ref', esc(s.ref), 'subref')}</div>`;
+    if (s.tipo === 'ponto') h = `<div class="cx" style="justify-content:center">${ed(i, 'num', esc(s.num), 'num')}${ed(i, 'titulo', esc(s.titulo), 't-ponto')}${ed(i, 'ref', esc(s.ref), 'subref')}</div>`;
     if (s.tipo === 'frase' || s.tipo === 'final') h = `<div class="meio">${ed(i, 'texto', esc(s.texto), 'frase-s')}</div>`;
     if (s.tipo === 'conclusao') h = `<div class="cx"><div class="t-conc">CONCLUSÃO</div>${ed(i, 'rotulo', esc(s.rotulo), 'rot')}<div class="linhas">${s.linhas.map((l, k) =>
       `<div class="linha-c"><b contenteditable="true" data-c="${i}|l${k}a">${esc(l[0])}</b><span contenteditable="true" data-c="${i}|l${k}b">${esc(l[1])}</span></div>`).join('')}</div></div>`;
@@ -636,7 +644,12 @@ function rgb(hex){ const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255
 async function baixarPdf(){
   if (!atual || !atual.slides) return;
   const btn = $('#bPdf'); btn.disabled = true; btn.textContent = 'Gerando…';
-  try {
+  try { const { blob, nome } = await pdfBlob(); baixarBlob(blob, nome); $('#slMsg').textContent = 'PDF gerado: ' + nome; }
+  catch (e){ $('#slMsg').textContent = 'Não consegui gerar o PDF: ' + (e.message || e); }
+  btn.disabled = false; btn.textContent = 'Baixar PDF dos slides';
+}
+async function pdfBlob(){
+  {
     const { jsPDF } = await carregarJsPDF();
     const W = 960, H = 540, P = paleta();
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [W, H] });
@@ -695,9 +708,13 @@ async function baixarPdf(){
         doc.setTextColor(110, 110, 110); caixa(s.ref, X, H - 90, LW, 30, { tam: 18, min: 14, estilo: 'normal' });
       }
       if (s.tipo === 'ponto'){
-        cor(P.acento); caixa(s.num, X, 50, 200, 80, { tam: 72, min: 72 });
-        cor('#F7F2EA'); caixa(s.titulo, X, 170, LW, 220, { tam: 50, min: 30, base: 'bottom' });
-        cor(P.acento); caixa(s.ref, X, H - 100, LW, 30, { tam: 20, min: 16 });
+        // número, título logo abaixo e a referência em seguida (sem o vão no meio)
+        // mede o título para centralizar o bloco (número + título + referência) na altura
+        let tt = 50, ln; for (; tt >= 30; tt--){ doc.setFont('helvetica', 'bold'); doc.setFontSize(tt); ln = doc.splitTextToSize(limpar(s.titulo), LW); if (ln.length * tt * 1.18 <= 230) break; }
+        const altT = ln.length * tt * 1.18, total = 80 + 18 + altT + 22 + 24, y0 = Math.max(40, (H - total) / 2);
+        cor(P.acento); caixa(s.num, X, y0, 200, 80, { tam: 72, min: 72 });
+        cor('#F7F2EA'); const yT = caixa(s.titulo, X, y0 + 98, LW, 230, { tam: 50, min: 30 });
+        cor(P.acento); caixa(s.ref, X, yT + 22, LW, 30, { tam: 20, min: 16 });
       }
       if (s.tipo === 'frase' || s.tipo === 'final'){
         cor('#F7F2EA'); caixa(s.texto, X, 50, LW, H - 100, { tam: 48, min: 28, alinhar: 'center', meio: true });
@@ -715,12 +732,42 @@ async function baixarPdf(){
       }
     });
     const nome = `${(atual.titulo || 'Sermão').toUpperCase()}${atual.ref ? ' - ' + atual.ref.replace(/:/g, '.') : ''} - slides.pdf`.replace(/[\\/?%*|"<>]/g, '');
-    doc.save(nome);
-    $('#slMsg').textContent = 'PDF gerado: ' + nome;
-  } catch (e){ $('#slMsg').textContent = 'Não consegui gerar o PDF: ' + (e.message || e); }
-  btn.disabled = false; btn.textContent = 'Baixar PDF dos slides';
+    return { blob: doc.output('blob'), nome };
+  }
 }
 $('#bPdf').onclick = baixarPdf;
+
+/* =====================================================================
+   5. ENVIAR AO PREGADOR — deixa um pacote neste aparelho e abre o Pregador
+   (o Pregador mora no mesmo endereço, eneas-ena.github.io, e lê o pacote ao abrir)
+   ===================================================================== */
+function caixaCanivete(valor){
+  return new Promise((ok, erro) => {
+    const r = indexedDB.open('canivete-entregas', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('pacotes', { keyPath: 'id' });
+    r.onerror = () => erro(r.error);
+    r.onsuccess = () => { const t = r.result.transaction('pacotes', 'readwrite'); t.objectStore('pacotes').put(valor); t.oncomplete = () => ok(); t.onerror = () => erro(t.error); };
+  });
+}
+function proximoDomingoISO(){ const d = new Date(); d.setDate(d.getDate() + ((7 - d.getDay()) % 7)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+async function enviarAoPregador(){
+  if (!atual) return;
+  const avisar = t => { $('#msg').innerHTML = `<div class="aviso">${t}</div>`; if ($('#slidesSec').classList.contains('ativa')) $('#slMsg').innerHTML = t; };
+  // abre a aba já (o navegador bloqueia janelas abertas depois de uma espera)
+  const aba = window.open('about:blank', '_blank');
+  try {
+    avisar('Preparando o Word' + (atual.slides ? ' e os slides…' : '…'));
+    const dx = await docxBlob();
+    const pd = atual.slides ? await pdfBlob() : null;
+    await caixaCanivete({ id: 'ultimo', criado: Date.now(), titulo: frasear(atual.titulo), ref: atual.ref || '', data: proximoDomingoISO(),
+      docx: dx.blob, nomeDocx: dx.nome, pdf: pd ? pd.blob : null, nomePdf: pd ? pd.nome : null });
+    const url = '../pregador-visual/?receber=canivete';
+    if (aba) aba.location.href = url; else location.href = url;
+    avisar('Enviado. O Pregador abriu com o sermão novo: confira e toque em Salvar.' + (atual.slides ? '' : ' (Foi sem slides: gere os slides antes, se quiser mandá-los juntos.)'));
+  } catch (e){ if (aba) aba.close(); avisar('Não consegui enviar: ' + esc(e.message || e)); }
+}
+$('#bEnviar').onclick = enviarAoPregador;
+$('#bEnviar2').onclick = enviarAoPregador;
 
 mostrar(); marcarBrancos();
 if (atual && atual.slides){ $('#slidesSec').classList.add('ativa'); pintarSlides(); }

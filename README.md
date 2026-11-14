@@ -8,7 +8,7 @@ O "canivete suíço" ministerial do Bispo: tudo num lugar só.
 
 - **Hoje** (`index.html`): a chave do dia (sermões do próximo domingo no Calendário do KTL e estudos de célula da semana), a agenda do UNI, o mural e o devocional do Vida Plena, o dólar, o aviso de backup e sugestões da IA.
 - **Memória** (`memoria.html`): digite um texto bíblico ou um tema e veja o que já foi pregado, ensinado e escrito sobre ele.
-- **Ateliê do Sermão** (`atelie.html`): abre o DOCX gerado pela IA, diagrama na receita do Bispo (bullets, frases de impacto, bronze), deixa revisar negritos e baixa o DOCX pronto. Também gera os slides (capa, texto bíblico da NAA guardada pelo Pregador, pontos, frases de impacto, conclusão), com escolha de cor, em PDF para o Pregador.
+- **Ateliê do Sermão** (`atelie.html`): abre o DOCX gerado pela IA, diagrama na receita do Bispo (bullets, frases de impacto, bronze), deixa revisar negritos e baixa o DOCX pronto. Também gera os slides (capa, texto bíblico da NAA guardada pelo Pregador, pontos, frases de impacto, conclusão), com escolha de cor, em PDF para o Pregador. O botão "Enviar ao Pregador" abre o Pregador Visual com um sermão novo já preenchido (Word, slides, título, data e texto base).
 - Os cômodos (Palavra, Púlpito, Rebanho, Formação, Mesa) levam aos outros apps.
 
 O Canivete só **lê** os outros apps; para editar, os botões abrem o app de origem.
