@@ -9,7 +9,7 @@
   const APPS = [
     { nome: 'InterTextus', dica: 'Interlinear: grego/hebraico', url: q => 'https://eneas-ena.github.io/interlinear/?ref=' + encodeURIComponent(q), soRef: true },
     { nome: 'Teólogo de Bolso', dica: 'Pesquisa bíblica', url: q => 'https://eneas-ena.github.io/teologia-de-bolso/?q=' + encodeURIComponent(q) },
-    { nome: 'Teologia em Minutos', dica: 'Perguntas de teologia', url: q => 'https://eneas-ena.github.io/teologia-em-minutos/?q=' + encodeURIComponent(q) }
+    { nome: 'Teologia em Minutos', dica: 'Perguntas de teologia', url: q => 'https://teologia-em-minutos.vercel.app/?q=' + encodeURIComponent(q) }
   ];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   /* parece uma referência bíblica? (Livro + capítulo) */
