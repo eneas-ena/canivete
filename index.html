@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Canivete" data-versao="0.10.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.10.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -206,7 +206,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.10.1';
+const VERSAO = '0.10.2';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -429,10 +429,82 @@ function ocorreUNI(e, d){
     default: return false;
   }
 }
+/* ---------- agendas do Google ligadas no UNI (iCal), lidas pelo mesmo Worker do UNI ---------- */
+const UNI_WORKER = 'https://uni-ia.eneaspr.workers.dev';
+const DOW_CODE = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+const icalUnfold = t => t.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, '');
+function icalLinha(l){ const i = l.indexOf(':'); if (i < 0) return null; const parts = l.slice(0, i).split(';'); const params = {}; parts.slice(1).forEach(p => { const [k, v] = p.split('='); params[k.toUpperCase()] = v || ''; }); return { name: parts[0].toUpperCase(), params, value: l.slice(i + 1) }; }
+function icalData(value, params){
+  value = (value || '').trim();
+  const soData = (params && /DATE/i.test(params.VALUE || '')) || /^\d{8}$/.test(value);
+  const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?/); if (!m) return null;
+  const y = +m[1], mo = +m[2], da = +m[3], h = m[4] != null ? +m[4] : null, mi = m[5] != null ? +m[5] : 0;
+  if (soData || h === null) return { date: `${y}-${pad(mo)}-${pad(da)}`, time: null };
+  if (m[7]){ const d = new Date(Date.UTC(y, mo - 1, da, h, mi, 0)); return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` }; }
+  return { date: `${y}-${pad(mo)}-${pad(da)}`, time: `${pad(h)}:${pad(mi)}` };
+}
+function icalRegra(s){
+  const r = {}; (s || '').replace(/^RRULE:/i, '').split(';').forEach(kv => { const [k, v] = kv.split('='); if (k) r[k.toUpperCase()] = v; });
+  return { FREQ: (r.FREQ || '').toUpperCase(), INTERVAL: r.INTERVAL ? +r.INTERVAL : 1, COUNT: r.COUNT ? +r.COUNT : null,
+    UNTIL: r.UNTIL ? r.UNTIL.slice(0, 8).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : null,
+    BYDAY: r.BYDAY ? r.BYDAY.split(',').map(d => DOW_CODE[d.replace(/^[+-]?\d*/, '').toUpperCase()]).filter(x => x != null) : null };
+}
+/* o evento (com ou sem repetição) cai neste dia? */
+function icalNoDia(ini, regra, dia){
+  if (!regra) return ini.date === dia;
+  if (dia < ini.date || (regra.UNTIL && dia > regra.UNTIL)) return false;
+  const iv = regra.INTERVAL || 1, dd = diffDias(ini.date, dia);
+  const alvo = new Date(dia + 'T12:00'), base = new Date(ini.date + 'T12:00');
+  let ok = false, n = null;
+  if (regra.FREQ === 'DAILY'){ ok = dd % iv === 0; n = Math.floor(dd / iv); }
+  else if (regra.FREQ === 'WEEKLY'){
+    const dias = regra.BYDAY && regra.BYDAY.length ? regra.BYDAY : [base.getDay()];
+    const semanas = Math.floor((dd + base.getDay()) / 7);
+    ok = dias.includes(alvo.getDay()) && semanas % iv === 0;
+  }
+  else if (regra.FREQ === 'MONTHLY'){ const meses = (alvo.getFullYear() - base.getFullYear()) * 12 + alvo.getMonth() - base.getMonth(); ok = ini.date.slice(8) === dia.slice(8) && meses % iv === 0; n = meses / iv; }
+  else if (regra.FREQ === 'YEARLY'){ const anos = alvo.getFullYear() - base.getFullYear(); ok = ini.date.slice(5) === dia.slice(5) && anos % iv === 0; n = anos / iv; }
+  if (ok && regra.COUNT && n != null && n >= regra.COUNT) ok = false;
+  return ok;
+}
+function icalDoDia(texto, dia){
+  const out = []; let cur = null;
+  icalUnfold(texto).split('\n').forEach(l => {
+    if (/^BEGIN:VEVENT/i.test(l)){ cur = {}; return; }
+    if (/^END:VEVENT/i.test(l)){
+      if (cur && cur.start && icalNoDia(cur.start, cur.rrule ? icalRegra(cur.rrule) : null, dia) && !(cur.exdates || []).includes(dia))
+        out.push({ time: cur.start.time, title: cur.summary || '(sem título)' });
+      cur = null; return;
+    }
+    if (!cur) return;
+    const p = icalLinha(l); if (!p) return;
+    if (p.name === 'DTSTART') cur.start = icalData(p.value, p.params);
+    else if (p.name === 'SUMMARY') cur.summary = p.value.replace(/\\,/g, ',').replace(/\\n/gi, ' ').replace(/\;/g, ';').trim();
+    else if (p.name === 'RRULE') cur.rrule = p.value;
+    else if (p.name === 'EXDATE') (cur.exdates = cur.exdates || []).push(...p.value.split(',').map(v => (icalData(v, p.params) || {}).date));
+  });
+  return out;
+}
+async function agendasExternas(c, dia){
+  const r = await c.from('calendars').select('*');
+  const cals = (r.data || []).filter(k => k.enabled !== false && k.url);
+  if (!cals.length) return [];
+  const s = await c.auth.getSession(); const tok = s.data && s.data.session && s.data.session.access_token;
+  const listas = await Promise.all(cals.map(k => fetch(UNI_WORKER + '/ical', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ url: k.url }) })
+    .then(x => x.text()).then(t => t.indexOf('BEGIN:VCALENDAR') < 0 ? [] : icalDoDia(t, dia).map(e => ({ ...e, note: k.name, externo: true })))
+    .catch(() => [])));
+  return [].concat(...listas);
+}
+
+let agendaExt = lerLS('canivete.agendaExt.' + HOJE, null);
 async function carregarAgenda(c){
   const [re, rt] = await Promise.all([c.from('events').select('*'), c.from('tasks').select('*')]);
   if (re.error && rt.error){ $('#agendaCorpo').innerHTML = `<div class="erro">Não consegui ler o UNI: ${esc(re.error.message)}</div>`; return; }
-  const evs = (re.data || []).filter(e => ocorreUNI(e, HOJE)).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+  pintarAgenda(re, rt);
+  agendasExternas(c, HOJE).then(ext => { agendaExt = ext; gravarLS('canivete.agendaExt.' + HOJE, ext); pintarAgenda(re, rt); }).catch(() => {});
+}
+function pintarAgenda(re, rt){
+  const evs = (re.data || []).filter(e => ocorreUNI(e, HOJE)).concat(agendaExt || []).sort((a, b) => (a.time || '00').localeCompare(b.time || '00'));
   const tasks = rt.data || [];
   const tHoje = tasks.filter(t => (t.date || HOJE) === HOJE).sort((a, b) => (!!a.done - !!b.done) || (a.time || '99').localeCompare(b.time || '99'));
   const tAtraso = tasks.filter(t => t.date && t.date < HOJE && !t.done).sort((a, b) => a.date.localeCompare(b.date));
@@ -446,7 +518,7 @@ async function carregarAgenda(c){
   html += '<div class="grupo-rot">COMPROMISSOS</div>';
   html += evs.length ? evs.map((e, i) => `<div class="agenda-item${i === proxima ? ' agora' : ''}">
       <span class="hora">${esc(hhmm(e.time) || '—')}</span>
-      <span class="o"><span>${esc(e.title)}</span>${e.note ? `<small>${esc(e.note)}</small>` : ''}</span></div>`).join('')
+      <span class="o"><span>${esc(e.title)}</span>${e.note ? `<small>${e.externo ? '🔒 ' : ''}${esc(e.note)}</small>` : ''}</span></div>`).join('')
     : '<div class="vazio">Nenhum compromisso hoje.</div>';
   html += '<div class="grupo-rot" style="margin-top:10px">TAREFAS</div>';
   if (tAtraso.length){
