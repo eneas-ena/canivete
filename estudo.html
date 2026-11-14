@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -86,6 +86,10 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
 .folha ol{margin:6px 0;padding-left:22px}
 .folha ol li{margin:0 0 2px}
 .folha .rodape{text-align:right;font-family:Calibri,Carlito,Arial,sans-serif;font-size:12px;color:#555;margin-top:24px}
+.pub-linha{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--borda)}
+.pub-linha b{color:var(--ouroTexto)}
+.pub-linha small{color:var(--mudo)}
+.pub-linha input[type=file]{font-size:13px;color:var(--mudo)}
 .vazia{display:none;margin-top:16px;text-align:center;color:var(--mudo);font-size:14px}
 .vazia.ativa{display:block}
 @media (max-width:640px){ .folha{padding:22px 18px 30px;font-size:14.5px} }
@@ -148,8 +152,19 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
     <span class="salvo" id="salvo" aria-live="polite"></span>
     <button class="btn peq" type="button" id="bPdf">Baixar PDF</button>
     <button class="btn peq" type="button" id="bDocx">Baixar DOCX</button>
-    <button class="btn peq ouro" type="button" id="bKtl">Salvar os dois no KTL</button>
+    <button class="btn peq" type="button" id="bKtl">Salvar os dois no KTL</button>
+    <button class="btn peq ouro" type="button" id="bPub">Publicar no Estudos de Células</button>
   </div>
+  <section class="cartao" id="pubPainel" hidden aria-labelledby="hPub">
+    <h2 id="hPub">PUBLICAR NO ESTUDOS DE CÉLULAS</h2>
+    <p class="aviso">Vai para <b>igreja-vidas.github.io/estudos-celulas</b> com a data <b id="pubData"></b>. Se já houver um estudo publicado nessa data, ele é substituído (não duplica).</p>
+    <div id="pubLinhas"></div>
+    <div class="botoes">
+      <button class="btn ouro" type="button" id="bPubOk">Publicar</button>
+      <button class="btn" type="button" id="bPubFechar">Fechar</button>
+    </div>
+    <div id="pubMsg" class="aviso" aria-live="polite" style="margin-top:8px"></div>
+  </section>
   <div id="ktlMsg" class="aviso" aria-live="polite" style="margin-top:8px"></div>
   <article class="folha" id="folha" aria-label="Estudo diagramado"></article>
   <p class="vazia" id="vazia">A versão dos adolescentes ainda não foi gerada. Toque em “Gerar versão dos adolescentes”.</p>
@@ -163,7 +178,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.8.0';
+const VERSAO = '0.8.1';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -730,6 +745,68 @@ async function salvarNoKtl(){
   btn.disabled = false;
 }
 $('#bKtl').onclick = salvarNoKtl;
+
+/* =====================================================================
+   5. PUBLICAR NO ESTUDOS DE CÉLULAS (mesmo banco: tabela cel_estudos + pasta "celulas")
+   ===================================================================== */
+const ROT_PUB = { adultos: 'Adultos', adolescentes: 'Adolescentes' };
+const slug = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'estudo';
+const fraseado = t => { t = String(t || '').trim(); if (t !== t.toUpperCase()) return t; t = t.toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1); };
+/* o título segue o jeito dos estudos já publicados (com "Estudo N" ou não; maiúsculas ou não) */
+async function tituloPub(c, v, S){
+  let modelo = '';
+  try { const r = await c.from('cel_estudos').select('titulo').eq('publico', v).order('data_estudo', { ascending: false }).limit(1); modelo = ((r.data || [])[0] || {}).titulo || ''; } catch {}
+  const caixaAlta = modelo && modelo === modelo.toUpperCase();
+  const palavras = modelo.split(/\s+/).filter(w => w.length > 3);
+  const capitalizado = !caixaAlta && palavras.length && palavras.filter(w => /^[A-ZÀ-Ý]/.test(w)).length >= palavras.length * 0.7;
+  const MIUDAS = /^(a|o|as|os|e|de|da|do|das|dos|em|na|no|nas|nos|um|uma|com|por|para|que|se|ao|aos|à|às)$/i;
+  let t = caixaAlta ? S.titulo.toUpperCase() : capitalizado
+    ? S.titulo.toLowerCase().split(' ').map((w, k) => k && MIUDAS.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    : fraseado(S.titulo);
+  const m = modelo.match(/^\s*(estudo)\s*\d+\s*([-–—:])\s*/i);
+  if (m) t = `${caixaAlta ? 'ESTUDO' : 'Estudo'} ${E.campos.numero} ${m[2]} ${t}`;
+  return t;
+}
+function abrirPub(){
+  salvarFolha(); lerCampos();
+  $('#pubPainel').hidden = false; $('#pubMsg').textContent = ''; $('#pubData').textContent = dataBR(E.campos.data) + '/' + (E.campos.data || '').slice(0, 4);
+  $('#pubLinhas').innerHTML = ['adultos', 'adolescentes'].map(v => `<div class="pub-linha">
+    <b>${ROT_PUB[v]}</b>
+    <span>${E[v] ? `${esc(E[v].titulo)}<br><small>PDF: o que o Canivete gera — ou troque pelo seu:</small> <input type="file" accept="application/pdf" id="pubArq_${v}" aria-label="Meu PDF dos ${ROT_PUB[v]}">` : '<small>Ainda não gerado: fica de fora.</small>'}</span>
+  </div>`).join('');
+  $('#pubPainel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+async function publicar(){
+  const versoes = ['adultos', 'adolescentes'].filter(v => E[v]);
+  const data = E.campos.data;
+  if (!data){ $('#pubMsg').textContent = 'Preencha a data do estudo.'; return; }
+  const btn = $('#bPubOk'); btn.disabled = true; $('#pubMsg').textContent = 'Publicando…';
+  const feitos = [];
+  try {
+    const c = await clienteLogado();
+    for (const v of versoes){
+      const S = E[v];
+      const meu = $('#pubArq_' + v) && $('#pubArq_' + v).files[0];
+      const blob = meu || (await pdfBlob(S)).blob;
+      const titulo = await tituloPub(c, v, S);
+      const path = `${v}/${data}-${slug(titulo).slice(0, 60)}-${Math.random().toString(36).slice(2, 8)}.pdf`;
+      const up = await c.storage.from('celulas').upload(path, blob, { contentType: 'application/pdf', upsert: false });
+      if (up.error) throw new Error(/row-level|policy|unauthorized|403/i.test(up.error.message || '') ? 'seu login não está como administrador do Estudos de Células.' : up.error.message);
+      const ja = await c.from('cel_estudos').select('id,pdf_path').eq('publico', v).eq('data_estudo', data).eq('arquivado', false).limit(1);
+      const antigo = (ja.data || [])[0];
+      const linha = { publico: v, titulo, tema: E.campos.tema || null, data_estudo: data, ano: +data.slice(0, 4), pdf_path: path };
+      const r = antigo ? await c.from('cel_estudos').update(linha).eq('id', antigo.id) : await c.from('cel_estudos').insert(linha);
+      if (r.error){ await c.storage.from('celulas').remove([path]); throw new Error(/row-level|policy/i.test(r.error.message || '') ? 'seu login não está como administrador do Estudos de Células.' : r.error.message); }
+      if (antigo && antigo.pdf_path) await c.storage.from('celulas').remove([antigo.pdf_path]);
+      feitos.push(`${ROT_PUB[v]} ${antigo ? 'substituído' : 'publicado'}${meu ? ' (seu PDF)' : ''}`);
+    }
+    $('#pubMsg').innerHTML = `Publicado ✓ ${feitos.join(' · ')}. <a href="https://igreja-vidas.github.io/estudos-celulas/" target="_blank" rel="noopener" style="color:var(--ouroTexto)">Abrir o Estudos de Células</a>`;
+  } catch (e){ $('#pubMsg').textContent = 'Não consegui publicar: ' + (e.message || e) + (feitos.length ? ' (' + feitos.join(' · ') + ')' : ''); }
+  btn.disabled = false;
+}
+$('#bPub').onclick = abrirPub;
+$('#bPubOk').onclick = publicar;
+$('#bPubFechar').onclick = () => { $('#pubPainel').hidden = true; };
 
 /* =====================================================================
    INÍCIO
