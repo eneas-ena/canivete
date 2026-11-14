@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Canivete" data-versao="0.7.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.8.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -197,7 +197,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.7.1';
+const VERSAO = '0.8.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -220,6 +220,7 @@ const COMODOS = {
     ['Gerador de slides', 'Slides dos sermões', 'https://eneas-ena.github.io/gerador-slides/']
   ],
   'Rebanho': [
+    ['Ateliê do Estudo', 'Devocional → estudo das células (adultos e RDA)', 'estudo.html'],
     ['Receber', 'Visitantes e decisões', 'https://eneas-ena.github.io/receber/'],
     ['Estudos de Células', 'Estudos semanais', 'https://igreja-vidas.github.io/estudos-celulas/'],
     ['Devocional Bíblico', 'Devocional da igreja', 'https://eneas-ena.github.io/devocional-vidas/']
@@ -372,7 +373,7 @@ function temLivroComum(textos){
 }
 
 function htmlEstudos(rows){
-  if (!rows.length) return '';
+  if (!rows.length) return `<div class="botoes" style="margin-top:6px;align-items:center"><span class="sub">Nenhum estudo de célula datado para esta semana.</span><a class="btn peq" href="estudo.html">Ateliê do Estudo</a></div>`;
   return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
     <div class="grupo-rot">ESTUDOS DE CÉLULA DA SEMANA</div>
     ${rows.map(e => `<div class="linha">
@@ -380,6 +381,7 @@ function htmlEstudos(rows){
       <span class="txt"><b>${esc(e.titulo || '(sem título)')}</b><span>${esc([e.referencia, e.tema].filter(Boolean).join(' · '))}</span></span>
       ${e.referencia ? `<a class="btn peq" href="${memoriaLink(e.referencia)}">O que já fiz</a>` : '<span></span>'}
     </div>`).join('')}
+    <div class="botoes"><a class="btn peq" href="estudo.html">Ateliê do Estudo</a></div>
   </div>`;
 }
 

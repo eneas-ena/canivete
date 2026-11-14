@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ateliê do Estudo · Canivete</title>
+<meta name="theme-color" content="#0F1B33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="../pregador-visual/biblia.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{ --fundo:#0B1426; --cartao:#13213D; --cartao2:#182A4C; --texto:#F3EEDF; --mudo:#A8B3C7; --borda:#26385C; --ouro:#C9A227; --ouroTexto:#D9B64A; --perigo:#E58B7A; --ok:#7FC79A; }
+[data-tema="claro"]{ --fundo:#F5F1E6; --cartao:#FFFFFF; --cartao2:#F8F4EA; --texto:#0F1B33; --mudo:#4E5A70; --borda:#E2D9C2; --ouro:#C9A227; --ouroTexto:#7D600B; --perigo:#A33A26; --ok:#2E7D4F; }
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fundo);color:var(--texto);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer}
+.app{max-width:1100px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 40px)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.marca small{font-family:Cinzel,serif;font-size:12px;letter-spacing:3px;color:var(--ouroTexto)}
+.marca small a{color:inherit;text-decoration:none}
+.marca h1{margin:0;font-family:'Cormorant Garamond',serif;font-size:34px;line-height:1.05}
+.marca p{margin:2px 0 0;color:var(--mudo);font-size:14px}
+.acoes{display:flex;align-items:center;gap:8px}
+.icone{width:44px;height:44px;border-radius:999px;border:1px solid var(--borda);background:var(--cartao);color:var(--ouroTexto);display:flex;align-items:center;justify-content:center}
+.versao{font-size:12px;color:var(--mudo);padding:0 4px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.btn.ouro{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
+.btn.peq{min-height:34px;padding:0 10px;font-size:13px}
+.btn:disabled{opacity:.4}
+.cartao{margin-top:18px;padding:16px 18px;border-radius:16px;border:1px solid var(--borda);background:var(--cartao)}
+.cartao h2{margin:0 0 10px;font-family:Cinzel,serif;font-size:14px;letter-spacing:2px;color:var(--ouroTexto)}
+.aviso{color:var(--mudo);font-size:14px}
+.erro{color:var(--perigo);font-size:14px}
+.linha-mes{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+input[type=month],input[type=date],input[type=number],input[type=text],textarea{font:inherit;color:var(--texto);background:var(--cartao2);border:1px solid var(--borda);border-radius:10px;padding:9px 10px;color-scheme:dark}
+[data-tema="claro"] input,[data-tema="claro"] textarea{color-scheme:light}
+.devs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:430px;overflow:auto;padding-right:4px}
+.dev{text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao2);color:var(--texto);display:flex;flex-direction:column;gap:3px}
+.dev.ativo{border-color:var(--ouro);box-shadow:0 0 0 2px var(--ouro) inset}
+.dev .d{font-size:12px;color:var(--ouroTexto);font-weight:600}
+.dev b{font-size:14px}
+.dev span{font-size:13px;color:var(--mudo)}
+.dev .ja{font-size:12px;color:var(--perigo)}
+.dev .novo{font-size:12px;color:var(--ok)}
+.campos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.campos label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mudo)}
+.campos label.largo{grid-column:1/-1}
+.campos textarea{min-height:64px;resize:vertical}
+.leitura{margin-top:10px;font-size:14px;color:var(--mudo);line-height:1.5}
+.leitura summary{cursor:pointer;color:var(--ouroTexto)}
+.passos{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.passos li::before{content:'○ ';color:var(--mudo)}
+.passos li.feito::before{content:'✓ ';color:var(--ok)}
+.passos li.indo::before{content:'◔ ';color:var(--ouroTexto)}
+.passos li.falhou::before{content:'✗ ';color:var(--perigo)}
+.botoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.abas{display:none;gap:8px;margin-top:22px;position:sticky;top:0;z-index:20;padding:10px;border-radius:14px;border:1px solid var(--borda);background:var(--cartao);flex-wrap:wrap;align-items:center}
+.abas.ativa{display:flex}
+.aba{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--borda);background:var(--cartao2);color:var(--texto)}
+.aba.ativa{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
+.abas .sep{flex:1}
+.salvo{font-size:12px;color:var(--mudo)}
+/* a folha imita o PDF das células */
+.folha{display:none;margin:16px auto 0;max-width:820px;background:#fff;color:#000;border-radius:6px;box-shadow:0 6px 30px rgba(0,0,0,.35);padding:34px 56px 50px;font-family:Arial,Helvetica,sans-serif;font-size:15.5px;line-height:1.38;text-align:justify}
+.folha.ativa{display:block}
+.folha [contenteditable]{outline:none;border-radius:3px}
+.folha [contenteditable]:focus{box-shadow:0 0 0 2px #E8D9A8}
+.folha .cab{display:flex;justify-content:space-between;font-family:Calibri,Carlito,Arial,sans-serif;font-size:13px;border-bottom:1px solid #333;padding-bottom:10px;margin-bottom:26px}
+.folha .tit{text-align:center;color:#AB7942;font-weight:700;font-size:22px;margin:0}
+.folha .ref{text-align:center;color:#AB7942;font-style:italic;margin:2px 0 0}
+.folha .vers{text-align:center;font-style:italic;margin:2px 0 0}
+.folha hr{border:none;border-top:1px solid #bbb;margin:22px 0 14px}
+.folha h3{color:#AB7942;font-weight:700;font-size:16px;margin:0 0 12px;text-align:left;text-transform:uppercase}
+.folha .pars p{margin:0}
+.folha .frase{text-align:center;font-weight:700;margin:16px 0}
+.folha .frase::before{content:'"'}
+.folha .frase::after{content:'"'}
+.folha .perg-t{font-weight:700;margin:14px 0 0}
+.folha .perg{margin:0}
+.folha ol{margin:6px 0;padding-left:22px}
+.folha ol li{margin:0 0 2px}
+.folha .rodape{text-align:right;font-family:Calibri,Carlito,Arial,sans-serif;font-size:12px;color:#555;margin-top:24px}
+.vazia{display:none;margin-top:16px;text-align:center;color:var(--mudo);font-size:14px}
+.vazia.ativa{display:block}
+@media (max-width:640px){ .folha{padding:22px 18px 30px;font-size:14.5px} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="marca">
+      <small><a href="./">‹ CANIVETE · HOJE</a></small>
+      <h1>Ateliê do Estudo</h1>
+      <p>Do devocional ao estudo das células, adultos e adolescentes</p>
+    </div>
+    <div class="acoes">
+      <span class="versao" id="versao"></span>
+      <button class="icone" id="bTema" type="button" aria-label="Alternar modo claro e escuro"></button>
+      <button class="icone" id="bAtualizar" type="button" aria-label="Atualizar app">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 1. ESCOLHER -->
+  <section class="cartao" aria-labelledby="h1">
+    <h2 id="h1">1 · ESCOLHER O DEVOCIONAL</h2>
+    <div class="linha-mes">
+      <label class="aviso" for="mes">Mês</label>
+      <input type="month" id="mes">
+      <span class="aviso" id="devAviso"></span>
+    </div>
+    <div class="devs" id="devs" role="listbox" aria-label="Devocionais do mês"></div>
+  </section>
+
+  <!-- 2. DADOS E GERAR -->
+  <section class="cartao" aria-labelledby="h2">
+    <h2 id="h2">2 · DADOS DO ESTUDO</h2>
+    <div class="campos">
+      <label>Número <input type="number" id="cNumero" min="1"></label>
+      <label>Data (quarta) <input type="date" id="cData"></label>
+      <label>Tema do ano (cabeçalho) <input type="text" id="cAno"></label>
+      <label>Tempo (minutos) <input type="number" id="cTempo" min="10" value="45"></label>
+      <label class="largo">Tema <input type="text" id="cTema" placeholder="Ex.: Perseverando na oração"></label>
+      <label>Texto bíblico <input type="text" id="cRef" placeholder="Ex.: Colossenses 4:2"></label>
+      <label class="largo">Ideia central (Big Idea) <textarea id="cIdeia" placeholder="Deixe em branco para a IA definir a partir do texto e do devocional"></textarea></label>
+    </div>
+    <details class="leitura" id="leitura" hidden><summary>Ler o devocional escolhido</summary><div id="leituraTxt"></div></details>
+    <div class="botoes">
+      <button class="btn ouro" type="button" id="bGerarA">Gerar estudo dos adultos</button>
+      <button class="btn" type="button" id="bGerarT" disabled>Gerar versão dos adolescentes</button>
+    </div>
+    <ol class="passos" id="passos"></ol>
+    <div id="msg" aria-live="polite"></div>
+  </section>
+
+  <!-- 3. REVISAR -->
+  <div class="abas" id="abas" role="toolbar" aria-label="Revisão">
+    <button class="aba ativa" type="button" data-v="adultos">Adultos</button>
+    <button class="aba" type="button" data-v="adolescentes">Adolescentes (RDA)</button>
+    <span class="sep"></span>
+    <span class="salvo" id="salvo" aria-live="polite"></span>
+    <button class="btn peq" type="button" id="bPdf">Baixar PDF</button>
+    <button class="btn peq" type="button" id="bDocx">Baixar DOCX</button>
+    <button class="btn peq ouro" type="button" id="bKtl">Salvar os dois no KTL</button>
+  </div>
+  <div id="ktlMsg" class="aviso" aria-live="polite" style="margin-top:8px"></div>
+  <article class="folha" id="folha" aria-label="Estudo diagramado"></article>
+  <p class="vazia" id="vazia">A versão dos adolescentes ainda não foi gerada. Toque em “Gerar versão dos adolescentes”.</p>
+</div>
+
+<script>
+/* =====================================================================
+   ATELIÊ DO ESTUDO
+   1. escolhe um dos devocionais do mês (Vida Plena) — mostra se o texto já virou estudo
+   2. gera o estudo dos adultos com o prompt do Bispo (IA do Canivete), em partes
+   3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
+   4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
+   ===================================================================== */
+const VERSAO = '0.8.0';
+const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
+const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
+const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
+const IA_MODELO = 'claude-sonnet-5-5';
+const BRONZE = 'AB7942';
+const TEMAS_ANO = { 2026: 'O Ano da Santidade', 2027: 'O Ano do Testemunho' };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const lerLS = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dataBR = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '';
+function proximaQuarta(){ const d = new Date(); d.setDate(d.getDate() + ((3 - d.getDay() + 7) % 7)); return iso(d); }
+
+/* ---------- padrões do app ---------- */
+$('#versao').textContent = 'v' + VERSAO;
+const SOL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const LUA = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+function aplicarTema(t){ document.documentElement.dataset.tema = t; $('#bTema').innerHTML = t === 'claro' ? LUA : SOL; gravarLS('canivete.tema', t); }
+aplicarTema(lerLS('canivete.tema', 'escuro'));
+$('#bTema').onclick = () => aplicarTema(document.documentElement.dataset.tema === 'claro' ? 'escuro' : 'claro');
+$('#bAtualizar').onclick = () => { if (window.porteiroAtualizar) window.porteiroAtualizar(); else location.reload(); };
+
+/* ---------- conexão (mesmo login dos outros apps) ---------- */
+let sb = null;
+function cliente(){
+  if (sb) return sb;
+  if (!window.supabase) return null;
+  sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { storageKey: 'bispo-auth', persistSession: true, autoRefreshToken: true } });
+  return sb;
+}
+async function clienteLogado(){
+  const t0 = Date.now(); let c = cliente();
+  while (!c && Date.now() - t0 < 10000){ await new Promise(ok => setTimeout(ok, 150)); c = cliente(); }
+  if (!c) throw new Error('não consegui carregar a conexão. Verifique a internet.');
+  const s = await c.auth.getSession();
+  if (s.data && s.data.session) return c;
+  await new Promise(ok => window.addEventListener('porteiro:entrou', ok, { once: true }));
+  return c;
+}
+
+/* ---------- estado (fica salvo neste aparelho) ---------- */
+let E = lerLS('estudo.rascunho', null) || { dev: null, campos: {}, adultos: null, adolescentes: null };
+let aba = 'adultos';
+function guardar(){ gravarLS('estudo.rascunho', E); }
+
+/* =====================================================================
+   1. DEVOCIONAIS DO MÊS
+   ===================================================================== */
+let devsDoMes = [];
+async function carregarMes(){
+  const m = $('#mes').value; if (!m) return;
+  const [a, mm] = m.split('-').map(Number);
+  const ini = `${m}-01`, fim = iso(new Date(a, mm, 0));
+  $('#devAviso').textContent = 'Carregando…'; $('#devs').innerHTML = '';
+  try {
+    const c = await clienteLogado();
+    const r = await c.schema('vidaplena').from('devocionais').select('data,titulo,referencia,texto_biblico,reflexao').gte('data', ini).lte('data', fim).order('data');
+    if (r.error) throw r.error;
+    devsDoMes = r.data || [];
+  } catch (e){ devsDoMes = []; $('#devAviso').innerHTML = `<span class="erro">Não consegui ler os devocionais: ${esc(e.message || e)}</span>`; return; }
+  $('#devAviso').textContent = devsDoMes.length ? `${devsDoMes.length} devocionais · conferindo na Memória o que já virou estudo…` : 'Nenhum devocional neste mês no Vida Plena.';
+  pintarDevs();
+  await conferirMemoria();
+  if (devsDoMes.length) $('#devAviso').textContent = `${devsDoMes.length} devocionais`;
+}
+function pintarDevs(){
+  $('#devs').innerHTML = devsDoMes.map((d, i) => `<button type="button" class="dev${E.dev && E.dev.data === d.data ? ' ativo' : ''}" data-i="${i}" role="option">
+    <span class="d">${dataBR(d.data)}</span><b>${esc(d.titulo || '(sem título)')}</b><span>${esc(d.referencia || '')}</span>
+    <span class="mem" id="mem${i}">${d._mem == null ? '' : d._mem.length ? `<span class="ja" title="${esc(d._mem.map(x => x.titulo + ' (' + x.quando + ')').join('\n'))}">Já virou estudo: ${d._mem.length}×</span>` : '<span class="novo">Ainda não virou estudo</span>'}</span>
+  </button>`).join('');
+}
+async function conferirMemoria(){
+  let c; try { c = await clienteLogado(); } catch { return; }
+  const fila = devsDoMes.map((d, i) => i).filter(i => devsDoMes[i].referencia && devsDoMes[i]._mem == null);
+  async function trabalhar(){
+    while (fila.length){
+      const i = fila.shift(), d = devsDoMes[i];
+      try {
+        const r = await c.rpc('memoria_buscar', { q: d.referencia, limite: 60 });
+        d._mem = (r.data || []).filter(x => x.tipo === 'estudo' && (x.motivo === 'texto' || (x.relevancia || 0) >= 0.4));
+      } catch { d._mem = []; }
+      const el = document.getElementById('mem' + i);
+      if (el) el.innerHTML = d._mem.length ? `<span class="ja" title="${esc(d._mem.map(x => x.titulo + ' (' + x.quando + ')').join('\n'))}">Já virou estudo: ${d._mem.length}×</span>` : '<span class="novo">Ainda não virou estudo</span>';
+    }
+  }
+  await Promise.all([trabalhar(), trabalhar(), trabalhar(), trabalhar()]);
+}
+$('#devs').addEventListener('click', async ev => {
+  const b = ev.target.closest('.dev'); if (!b) return;
+  const d = devsDoMes[+b.dataset.i];
+  E.dev = { data: d.data, titulo: d.titulo, referencia: d.referencia, texto_biblico: d.texto_biblico, reflexao: d.reflexao };
+  $('#cTema').value = d.titulo || ''; $('#cRef').value = d.referencia || ''; $('#cIdeia').value = '';
+  lerCampos(); guardar(); pintarDevs(); mostrarLeitura();
+  $('#msg').innerHTML = `<div class="aviso">Devocional de ${dataBR(d.data)} escolhido. Confira os dados e toque em “Gerar estudo dos adultos”.</div>`;
+});
+function mostrarLeitura(){
+  const d = E.dev; $('#leitura').hidden = !d; if (!d) return;
+  $('#leituraTxt').innerHTML = `<p><b>${esc(d.titulo || '')}</b> · ${esc(d.referencia || '')}</p>${d.texto_biblico ? `<p><i>${esc(d.texto_biblico)}</i></p>` : ''}${String(d.reflexao || '').split(/\n+/).map(p => `<p>${esc(p)}</p>`).join('')}`;
+}
+
+/* ---------- campos ---------- */
+const CAMPOS = { numero: '#cNumero', data: '#cData', ano: '#cAno', tempo: '#cTempo', tema: '#cTema', ref: '#cRef', ideia: '#cIdeia' };
+function lerCampos(){ for (const [k, s] of Object.entries(CAMPOS)) E.campos[k] = $(s).value.trim(); guardar(); }
+function preencherCampos(){ for (const [k, s] of Object.entries(CAMPOS)) if (E.campos[k] != null && E.campos[k] !== '') $(s).value = E.campos[k]; }
+Object.values(CAMPOS).forEach(s => $(s).addEventListener('change', lerCampos));
+$('#cData').addEventListener('change', async () => {
+  const a = +($('#cData').value || '').slice(0, 4);
+  if (TEMAS_ANO[a]) $('#cAno').value = `${a} – ${TEMAS_ANO[a]}`;
+  await sugerirNumero(); lerCampos();
+});
+async function sugerirNumero(){
+  try {
+    const c = await clienteLogado();
+    const r = await c.rpc('canivete_proximo_estudo', { p_data: $('#cData').value || proximaQuarta() });
+    if (!r.error && r.data) $('#cNumero').value = r.data;
+  } catch {}
+}
+
+/* =====================================================================
+   2. IA — o prompt do Bispo, em partes (cada parte é um pedido curto)
+   ===================================================================== */
+const PROMPT_BISPO = `Aja como um teólogo cristão experiente, expositor bíblico e pregador com sólida formação nas tradições batista e pentecostal, com domínio avançado de hermenêutica, exegese e homilética, e grande habilidade em comunicação clara, pastoral e inspiradora.
+
+Sua tarefa é elaborar um Estudo Bíblico completo, profundamente bíblico, expositivo e aplicável, mantendo equilíbrio entre profundidade teológica e acessibilidade para ouvintes leigos.
+
+OBJETIVO DO ESTUDO — O Estudo DEVE: ser fiel ao texto bíblico; estar alinhado à teologia cristã (com coerência batista e pentecostal); ser claro, envolvente e acessível para pessoas leigas; ter progressão lógica clara (unidade, ordem, proporção e progresso); conduzir o ouvinte a transformação prática, não apenas informação.
+
+ESTRUTURA OBRIGATÓRIA
+INTRODUÇÃO — aproximadamente 150 palavras; criativa, envolvente e conectada com a vida real; pode usar metáfora, pergunta, contraste ou narrativa; apresentar o tema de forma natural; conduzir diretamente à ideia central; gerar interesse imediato.
+DESENVOLVIMENTO (3 PONTOS PRINCIPAIS) — cada ponto DEVE conter: aproximadamente entre 800 a 1000 palavras; título forte, claro e impactante; exegese completa (explicação do texto a que o ponto se refere); ilustração (analogia prática, história ou imagem mental clara, que facilite o entendimento do ponto); aplicação (direta, prática e confrontadora, voltada para a vida do ouvinte, levando à reflexão e mudança real); frase de impacto (uma frase forte, memorável e ensinável); transição (conectar naturalmente com o próximo ponto).
+CONCLUSÃO — aproximadamente 150 palavras; recapitular os pontos principais de forma progressiva; reforçar a ideia central; criar senso de urgência espiritual; NÃO introduzir novas ideias.
+DESAFIO FINAL — chamado claro, direto e prático à ação.
+
+DIRETRIZES DE ESTILO: linguagem clara, acessível e pastoral; evitar termos excessivamente técnicos sem explicação; manter profundidade sem perder simplicidade; usar versículos de apoio quando necessário; criar conexão emocional e espiritual com o ouvinte; evitar superficialidade.
+DIFERENCIAIS OBRIGATÓRIOS: inserir frases de impacto ao longo do estudo; garantir transições naturais entre os pontos; garantir que o estudo seja totalmente ensinável (não apenas teórico); priorizar transformação espiritual acima de informação.
+FORMATO FINAL: escrita fluida, natural e com ritmo de pregação.`;
+
+const REGRAS_SAIDA = `
+
+REGRAS DE SAÍDA (obrigatórias):
+- Português do Brasil. Nenhuma palavra em espanhol.
+- Responda SOMENTE com um objeto JSON válido, sem texto antes ou depois, sem crases.
+- Parágrafos curtos: cada item de uma lista de parágrafos tem de 1 a 3 frases.
+- Nada de Markdown (#, *, **, _), nem rótulos como "Exegese:", "Ilustração:", "Aplicação:", "Transição:" no texto: tudo flui em parágrafos.
+- Citações bíblicas entre aspas, com a referência entre parênteses, por exemplo: "texto" (Atos 2:42).`;
+
+const PROMPT_RDA = `Você é um teólogo e pastor de adolescentes (12 a 17 anos) das tradições batista e pentecostal. Você adapta estudos bíblicos de célula escritos para adultos para a linguagem dos adolescentes, mantendo o mesmo texto bíblico, a mesma ideia central e a mesma fidelidade bíblica.
+Como deve ser a versão dos adolescentes:
+- Fala direto com o adolescente ("você"), com frases mais curtas e vocabulário simples, sem ser infantil.
+- Exemplos e ilustrações NOVOS, tirados do mundo deles: escola, provas, amizades, família, celular, redes sociais, vídeos, jogos, esportes, comparação, ansiedade, pressão do grupo.
+- Mantém a explicação do texto (o que Paulo, Jesus etc. quis dizer), mas de forma acessível.
+- Aplicações concretas para a semana deles.
+- Cada ponto tem aproximadamente 500 a 650 palavras.
+- No fim, um desafio com passos práticos numerados.`;
+
+async function pedirJSON(sistema, pedido, maxTokens){
+  let ultimoErro;
+  for (let tentativa = 0; tentativa < 2; tentativa++){
+    try {
+      const r = await fetch(IA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: IA_MODELO, max_tokens: maxTokens, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n---\n\n' + pedido }] }) });
+      const j = await r.json();
+      if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('HTTP ' + r.status));
+      const txt = (j.content || []).map(c => c.text || '').join('');
+      return JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
+    } catch (e){ ultimoErro = e; }
+  }
+  throw ultimoErro;
+}
+const lista = v => (Array.isArray(v) ? v : String(v || '').split(/\n+/)).map(s => String(s).trim()).filter(Boolean);
+
+/* ---------- passos na tela ---------- */
+function passos(nomes){ $('#passos').innerHTML = nomes.map((n, i) => `<li id="ps${i}">${esc(n)}</li>`).join(''); }
+function passo(i, estado){ const el = $('#ps' + i); if (el) el.className = estado; }
+
+function dadosDoEstudo(){
+  lerCampos();
+  const c = E.campos, d = E.dev;
+  return `DADOS DO ESTUDO
+Tema: ${c.tema || '(defina a partir do texto)'}
+Texto bíblico: ${c.ref || '(sugira o mais adequado)'}
+Ideia central (Big Idea): ${c.ideia || '(defina a partir do texto e do devocional)'}
+Tempo de duração aproximado: ${c.tempo || 45} minutos
+Público-alvo: adultos das células da Igreja Vidas (${c.ano || ''})
+${d ? `\nDEVOCIONAL QUE INSPIROU O ESTUDO (use como ponto de partida, sem copiar):\nTítulo: ${d.titulo || ''}\nReferência: ${d.referencia || ''}\n${String(d.reflexao || '').slice(0, 2500)}` : ''}`;
+}
+
+async function gerarAdultos(){
+  lerCampos();
+  if (!E.campos.ref && !E.campos.tema){ $('#msg').innerHTML = '<div class="erro">Escolha um devocional ou preencha o tema e o texto.</div>'; return; }
+  if (E.adultos && !confirm('Gerar de novo o estudo dos adultos? O texto atual (com suas correções) será substituído.')) return;
+  const sis = PROMPT_BISPO + REGRAS_SAIDA;
+  passos(['Plano do estudo e introdução', 'Ponto 1', 'Ponto 2', 'Ponto 3', 'Conclusão, desafio e oração final', 'Texto bíblico (NAA)']);
+  travar(true); $('#msg').innerHTML = '<div class="aviso">Gerando… leva uns 3 minutos. Pode deixar esta tela aberta.</div>';
+  const est = { versao: 'adultos' };
+  let i = 0;
+  try {
+    passo(0, 'indo');
+    const p0 = await pedirJSON(sis, dadosDoEstudo() + `
+
+Primeiro, planeje o estudo e escreva a INTRODUÇÃO. Formato:
+{"titulo": "título do estudo em MAIÚSCULAS, de 2 a 6 palavras",
+ "big_idea": "a ideia central em uma frase",
+ "pontos": [{"titulo": "TÍTULO FORTE DO PONTO – SUBTÍTULO", "foco": "que parte do texto o ponto explica e qual é a ênfase"}, {…}, {…}],
+ "introducao": ["parágrafo", "…"]}`, 1600);
+    est.titulo = String(p0.titulo || E.campos.tema || '').toUpperCase(); est.big_idea = p0.big_idea || '';
+    est.intro = lista(p0.introducao);
+    const plano = (p0.pontos || []).slice(0, 3);
+    passo(0, 'feito');
+    est.pontos = [];
+    const resumoPlano = `Título: ${est.titulo}\nIdeia central: ${est.big_idea}\nTexto: ${E.campos.ref}\nPontos:\n${plano.map((p, k) => `${k + 1}. ${p.titulo} — ${p.foco}`).join('\n')}`;
+    for (i = 1; i <= 3; i++){
+      passo(i, 'indo');
+      const pl = plano[i - 1] || { titulo: 'Ponto ' + i, foco: '' };
+      const anterior = est.pontos[i - 2] ? est.pontos[i - 2].paragrafos.slice(-2).join(' ') : est.intro.slice(-1).join(' ');
+      const pi = await pedirJSON(sis, dadosDoEstudo() + `
+
+PLANO JÁ DEFINIDO:
+${resumoPlano}
+
+Final do trecho anterior (para dar continuidade): "${anterior}"
+
+Agora escreva SOMENTE o PONTO ${i}: "${pl.titulo}" (${pl.foco}).
+Entre 800 e 1000 palavras: exegese do texto, ilustração, aplicação direta e confrontadora${i < 3 ? ', terminando com uma transição natural para o ponto ' + (i + 1) : ''}.
+Formato:
+{"titulo": "${pl.titulo}",
+ "paragrafos": ["parágrafo", "…"],
+ "frase": "a frase de impacto do ponto, sem aspas",
+ "perguntas": "uma ou duas perguntas para discussão em grupo, num só parágrafo"}`, 3500);
+      est.pontos.push({ titulo: String(pi.titulo || pl.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() });
+      passo(i, 'feito');
+    }
+    i = 4; passo(4, 'indo');
+    const pf = await pedirJSON(sis, dadosDoEstudo() + `
+
+PLANO JÁ DEFINIDO:
+${resumoPlano}
+Frases de impacto dos pontos: ${est.pontos.map(p => p.frase).join(' | ')}
+
+Agora escreva a CONCLUSÃO (cerca de 150 palavras, sem ideias novas), o DESAFIO FINAL (chamado claro, direto e prático, 2 a 4 parágrafos curtos) e uma ORAÇÃO FINAL (um parágrafo, terminando com "Amém.").
+Formato:
+{"conclusao": ["parágrafo", "…"],
+ "desafio": ["parágrafo", "…"],
+ "oracao": ["parágrafo"]}`, 1800);
+    est.conclusao = lista(pf.conclusao); est.conclusao_frase = '';
+    est.desafio = { titulo: 'DESAFIO FINAL', abertura: lista(pf.desafio), passos: [], fechamento: [] };
+    est.oracao = lista(pf.oracao);
+    passo(4, 'feito');
+    i = 5; passo(5, 'indo');
+    est.ref = E.campos.ref; est.versiculo = await versiculoNAA(E.campos.ref) || (E.dev && E.campos.ref === E.dev.referencia ? (E.dev.texto_biblico || '') : '');
+    passo(5, est.versiculo ? 'feito' : 'falhou');
+    E.adultos = est; guardar();
+    $('#msg').innerHTML = `<div class="aviso">Estudo dos adultos pronto${est.versiculo ? '' : ' (não achei o texto bíblico na NAA deste aparelho: toque abaixo do texto bíblico na folha e escreva o versículo)'}. Revise na folha. Depois gere a versão dos adolescentes.</div>`;
+    trocarAba('adultos');
+  } catch (e){
+    passo(i, 'falhou');
+    $('#msg').innerHTML = `<div class="erro">A IA não respondeu nesta parte (${esc(e.message || e)}). Toque em “Gerar estudo dos adultos” para tentar de novo.</div>`;
+  }
+  travar(false);
+}
+
+async function gerarAdolescentes(){
+  salvarFolha();
+  const A = E.adultos; if (!A) return;
+  if (E.adolescentes && !confirm('Gerar de novo a versão dos adolescentes? O texto atual (com suas correções) será substituído.')) return;
+  const sis = PROMPT_RDA + REGRAS_SAIDA;
+  passos(['Títulos e introdução', 'Ponto 1', 'Ponto 2', 'Ponto 3', 'Conclusão, desafio e oração final']);
+  travar(true); $('#msg').innerHTML = '<div class="aviso">Gerando a versão dos adolescentes… leva uns 2 minutos.</div>';
+  const T = { versao: 'adolescentes', titulo: A.titulo, ref: A.ref, versiculo: A.versiculo, big_idea: A.big_idea };
+  const base = `ESTUDO DOS ADULTOS (base da adaptação)\nTítulo: ${A.titulo}\nTexto: ${A.ref} — ${A.versiculo || ''}\nIdeia central: ${A.big_idea || ''}\nPontos: ${A.pontos.map((p, k) => `${k + 1}. ${p.titulo}`).join(' | ')}`;
+  let i = 0;
+  try {
+    passo(0, 'indo');
+    const p0 = await pedirJSON(sis, base + `\n\nINTRODUÇÃO DOS ADULTOS:\n${A.intro.join('\n')}
+
+Adapte para os adolescentes: os títulos dos 3 pontos (mais diretos, de preferência com um verbo, no formato "TÍTULO – SUBTÍTULO") e a INTRODUÇÃO (cerca de 180 palavras, começando com uma situação do dia a dia deles).
+Formato:
+{"pontos": ["TÍTULO 1 – SUBTÍTULO", "TÍTULO 2 – SUBTÍTULO", "TÍTULO 3 – SUBTÍTULO"],
+ "introducao": ["parágrafo", "…"]}`, 1400);
+    T.intro = lista(p0.introducao);
+    const titulos = (p0.pontos || []).map(t => String(t).toUpperCase());
+    passo(0, 'feito');
+    T.pontos = [];
+    for (i = 1; i <= 3; i++){
+      passo(i, 'indo');
+      const pa = A.pontos[i - 1];
+      const pi = await pedirJSON(sis, base + `\n\nPONTO ${i} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}\nFrase de impacto: ${pa.frase}\nPerguntas: ${pa.perguntas}
+
+Adapte SOMENTE este ponto para os adolescentes (500 a 650 palavras), com o título "${titulos[i - 1] || pa.titulo}". Ilustrações novas do mundo deles. Frase de impacto nova, curta e memorável. Perguntas para o grupo de adolescentes.
+Formato:
+{"titulo": "${titulos[i - 1] || pa.titulo}",
+ "paragrafos": ["parágrafo", "…"],
+ "frase": "frase de impacto, sem aspas",
+ "perguntas": "uma ou duas perguntas, num só parágrafo"}`, 2600);
+      T.pontos.push({ titulo: String(pi.titulo || titulos[i - 1] || pa.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() });
+      passo(i, 'feito');
+    }
+    i = 4; passo(4, 'indo');
+    const pf = await pedirJSON(sis, base + `\n\nCONCLUSÃO DOS ADULTOS:\n${A.conclusao.join('\n')}\nDESAFIO DOS ADULTOS:\n${A.desafio.abertura.join('\n')}
+Pontos dos adolescentes: ${T.pontos.map(p => p.titulo).join(' | ')}
+
+Escreva para os adolescentes: a CONCLUSÃO (cerca de 150 palavras, terminando com uma frase de impacto), o DESAFIO FINAL E CHAMADO À AÇÃO (uma frase de abertura, 3 ou 4 passos práticos numerados para a semana, cada um com um rótulo curto e uma explicação, e um fechamento curto) e a ORAÇÃO FINAL (1 ou 2 parágrafos, terminando com "Em nome de Jesus. Amém.").
+Formato:
+{"conclusao": ["parágrafo", "…"],
+ "conclusao_frase": "frase de impacto, sem aspas",
+ "desafio": {"abertura": ["parágrafo"], "passos": [{"rotulo": "Escolha um horário", "texto": "…"}, …], "fechamento": ["parágrafo"]},
+ "oracao": ["parágrafo", "…"]}`, 2200);
+    T.conclusao = lista(pf.conclusao); T.conclusao_frase = limparAspas(pf.conclusao_frase);
+    const dz = pf.desafio || {};
+    T.desafio = { titulo: 'DESAFIO FINAL E CHAMADO À AÇÃO', abertura: lista(dz.abertura), passos: (dz.passos || []).map(p => ({ rotulo: String(p.rotulo || '').replace(/:\s*$/, ''), texto: String(p.texto || '') })), fechamento: lista(dz.fechamento) };
+    T.oracao = lista(pf.oracao);
+    passo(4, 'feito');
+    E.adolescentes = T; guardar();
+    $('#msg').innerHTML = '<div class="aviso">Versão dos adolescentes pronta. Revise na aba “Adolescentes (RDA)”.</div>';
+    trocarAba('adolescentes');
+  } catch (e){
+    passo(i, 'falhou');
+    $('#msg').innerHTML = `<div class="erro">A IA não respondeu nesta parte (${esc(e.message || e)}). Toque em “Gerar versão dos adolescentes” para tentar de novo.</div>`;
+  }
+  travar(false);
+}
+const limparAspas = t => String(t || '').trim().replace(/^["“”']+|["“”']+$/g, '').trim();
+function travar(sim){ $('#bGerarA').disabled = sim; $('#bGerarT').disabled = sim || !E.adultos; }
+$('#bGerarA').onclick = gerarAdultos;
+$('#bGerarT').onclick = gerarAdolescentes;
+
+/* ---------- versículo-tema na NAA (a mesma que o Pregador guarda neste aparelho) ---------- */
+function lerRef(ref){
+  const m = String(ref || '').replace(/[–—]/g, '-').match(/^\s*((?:[1-3]|I{1,3})\s*)?([^\d]+?)\s*(\d+)\s*[:.]\s*(\d+)(?:\s*-\s*(?:(\d+)\s*[:.]\s*)?(\d+))?/);
+  if (!m) return null;
+  let pref = (m[1] || '').trim(); if (/^I+$/.test(pref)) pref = String(pref.length);
+  return { nome: (pref ? pref + ' ' : '') + m[2].trim(), livroSemNum: m[2].trim(), cap: +m[3], v1: +m[4], cap2: m[5] ? +m[5] : +m[3], v2: m[6] ? +m[6] : +m[4] };
+}
+async function versiculoNAA(ref){
+  const rf = lerRef(ref); if (!rf || !window.PVBiblia) return '';
+  const id = window.PVBiblia.idDoNome(rf.nome) || window.PVBiblia.idDoNome(rf.livroSemNum); if (!id) return '';
+  const out = [];
+  for (let c = rf.cap; c <= rf.cap2; c++){
+    const ini = c === rf.cap ? rf.v1 : 1, fim = c === rf.cap2 ? rf.v2 : 200;
+    for (let v = ini; v <= fim && out.length < 4; v++){
+      let t = ''; try { t = await window.PVBiblia.texto('NAA', { livro: id, cap: c, faixas: [[v, v]] }); } catch {}
+      if (!t){ if (c < rf.cap2) break; else continue; }
+      out.push(t.replace(/^[⁰¹²³⁴⁵⁶⁷⁸⁹⁻\d]+\s*/, '').trim());
+    }
+  }
+  return out.join(' ');
+}
+
+/* =====================================================================
+   3. A FOLHA — mostra o estudo como fica no PDF; tudo é editável
+   ===================================================================== */
+const ed = (k, html, tag = 'p', cls = '') => `<${tag} class="${cls}" contenteditable="true" data-k="${k}">${html}</${tag}>`;
+const pars = (k, arr) => `<div class="pars" contenteditable="true" data-k="${k}" data-tipo="lista">${(arr && arr.length ? arr : ['']).map(p => `<p>${esc(p)}</p>`).join('')}</div>`;
+function cabecalho(){ return E.campos.ano || (() => { const a = +(E.campos.data || proximaQuarta()).slice(0, 4); return `${a} – ${TEMAS_ANO[a] || ''}`; })(); }
+function pintarFolha(){
+  const S = E[aba];
+  $('#abas').classList.toggle('ativa', !!E.adultos);
+  document.querySelectorAll('.aba').forEach(b => b.classList.toggle('ativa', b.dataset.v === aba));
+  $('#vazia').classList.toggle('ativa', !!E.adultos && !S);
+  if (!S){ $('#folha').classList.remove('ativa'); $('#folha').innerHTML = ''; return; }
+  let h = `<div class="cab"><span>Igreja Vidas</span><span>${esc(cabecalho())}</span></div>`;
+  h += ed('titulo', esc(S.titulo), 'p', 'tit') + ed('ref', esc(S.ref), 'p', 'ref') + ed('versiculo', esc(S.versiculo || ''), 'p', 'vers');
+  h += '<hr><h3>Introdução</h3>' + pars('intro', S.intro);
+  S.pontos.forEach((p, i) => {
+    h += `<hr><h3>Ponto ${i + 1}: <span contenteditable="true" data-k="p${i}.titulo">${esc(p.titulo)}</span></h3>`;
+    h += pars(`p${i}.paragrafos`, p.paragrafos) + ed(`p${i}.frase`, esc(p.frase), 'p', 'frase');
+    h += '<p class="perg-t">Perguntas para Discussão em Grupo</p>' + ed(`p${i}.perguntas`, esc(p.perguntas), 'p', 'perg');
+  });
+  h += '<hr><h3>Conclusão</h3>' + pars('conclusao', S.conclusao);
+  if (S.conclusao_frase) h += ed('conclusao_frase', esc(S.conclusao_frase), 'p', 'frase');
+  h += `<hr><h3 contenteditable="true" data-k="desafio.titulo">${esc(S.desafio.titulo)}</h3>` + pars('desafio.abertura', S.desafio.abertura);
+  if (S.desafio.passos.length){
+    h += `<ol contenteditable="true" data-k="desafio.passos">${S.desafio.passos.map(p => `<li><b>${esc(p.rotulo)}:</b> ${esc(p.texto)}</li>`).join('')}</ol>`;
+    h += pars('desafio.fechamento', S.desafio.fechamento);
+  }
+  h += '<hr><h3>Oração final</h3>' + pars('oracao', S.oracao);
+  $('#folha').innerHTML = h; $('#folha').classList.add('ativa');
+}
+/* lê a folha de volta para o estudo (o que o Bispo corrigiu) */
+function salvarFolha(){
+  const S = E[aba]; if (!S || !$('#folha').classList.contains('ativa')) return;
+  const txt = el => el.textContent.replace(/\s+/g, ' ').trim();
+  $('#folha').querySelectorAll('[data-k]').forEach(el => {
+    const k = el.dataset.k;
+    let v;
+    if (el.dataset.tipo === 'lista'){
+      const ps = [...el.querySelectorAll('p, div')].filter(x => !x.querySelector('p, div'));
+      v = (ps.length ? ps.map(txt) : el.innerText.split(/\n+/).map(s => s.trim())).filter(Boolean);
+    } else if (k === 'desafio.passos'){
+      v = [...el.querySelectorAll('li')].map(li => { const t = txt(li); const m = t.match(/^([^:]{1,60}):\s*(.*)$/); return m ? { rotulo: m[1], texto: m[2] } : { rotulo: '', texto: t }; }).filter(p => p.rotulo || p.texto);
+    } else v = txt(el);
+    const m = k.match(/^p(\d)\.(\w+)$/);
+    if (m) S.pontos[+m[1]][m[2]] = v;
+    else if (k.startsWith('desafio.')) S.desafio[k.slice(8)] = v;
+    else S[k] = v;
+  });
+  guardar();
+}
+let tFolha;
+$('#folha').addEventListener('input', () => { $('#salvo').textContent = 'Salvando…'; clearTimeout(tFolha); tFolha = setTimeout(() => { salvarFolha(); $('#salvo').textContent = 'Alterações salvas ✓'; }, 500); });
+function trocarAba(v){ salvarFolha(); aba = v; pintarFolha(); travar(false); }
+document.querySelectorAll('.aba').forEach(b => b.onclick = () => trocarAba(b.dataset.v));
+
+/* =====================================================================
+   4. EXPORTAR — nomes iguais aos que o Bispo usa
+   ===================================================================== */
+function nomeArquivo(S){ return `ESTUDO ${E.campos.numero || ''} - ${S.titulo}${S.versao === 'adolescentes' ? ' - RDA' : ''}`.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim(); }
+function baixarBlob(blob, nome){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+function carregarScript(src, global){
+  if (window[global]) return Promise.resolve(window[global]);
+  return new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = src;
+    sc.onload = () => window[global] ? ok(window[global]) : erro(new Error(src)); sc.onerror = () => erro(new Error('não carregou ' + src)); document.head.appendChild(sc); });
+}
+/* blocos na ordem do documento: o mesmo roteiro serve para PDF, DOCX e KTL */
+function blocos(S){
+  const B = [];
+  B.push({ t: 'tit', x: S.titulo }, { t: 'ref', x: S.ref });
+  if (S.versiculo) B.push({ t: 'vers', x: S.versiculo });
+  B.push({ t: 'sec', x: 'INTRODUÇÃO' }); S.intro.forEach(x => B.push({ t: 'p', x }));
+  S.pontos.forEach((p, i) => {
+    B.push({ t: 'sec', x: `PONTO ${i + 1}: ${p.titulo}` }); p.paragrafos.forEach(x => B.push({ t: 'p', x }));
+    if (p.frase) B.push({ t: 'frase', x: `"${p.frase}"` });
+    B.push({ t: 'perg-t', x: 'Perguntas para Discussão em Grupo' }); if (p.perguntas) B.push({ t: 'p', x: p.perguntas });
+  });
+  B.push({ t: 'sec', x: 'CONCLUSÃO' }); S.conclusao.forEach(x => B.push({ t: 'p', x }));
+  if (S.conclusao_frase) B.push({ t: 'frase', x: `"${S.conclusao_frase}"` });
+  B.push({ t: 'sec', x: S.desafio.titulo }); S.desafio.abertura.forEach(x => B.push({ t: 'p', x }));
+  S.desafio.passos.forEach((p, k) => B.push({ t: 'item', n: k + 1, r: p.rotulo, x: p.texto }));
+  S.desafio.fechamento.forEach(x => B.push({ t: 'p', x }));
+  B.push({ t: 'sec', x: 'ORAÇÃO FINAL' }); S.oracao.forEach(x => B.push({ t: 'p', x }));
+  return B;
+}
+
+/* ---------- PDF (A4, como o modelo: cabeçalho, linhas, Página N) ---------- */
+const PERMITIDOS = '—–“”‘’…•€';
+const limpar = t => [...String(t || '')].map(c => c.charCodeAt(0) <= 255 || PERMITIDOS.includes(c) ? c : c.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\x00-\xff]/g, '')).join('');
+async function pdfBlob(S){
+  const { jsPDF } = await carregarScript('jspdf.umd.min.js', 'jspdf');
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = 595.28, H = 841.89, ML = 51, MR = 51, TOP = 92, BASE = H - 62, LW = W - ML - MR;
+  const COR = [171, 121, 66];
+  let y = TOP, pag = 1;
+  function moldura(){
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(0);
+    doc.text('Igreja Vidas', ML, 42); doc.text(limpar(cabecalho()), W - MR, 42, { align: 'right' });
+    doc.setDrawColor(40); doc.setLineWidth(0.6); doc.line(ML, 56, W - MR, 56);
+    doc.setFontSize(9); doc.text('Página  ' + pag, W - MR, H - 30, { align: 'right' });
+  }
+  function novaPagina(){ doc.addPage(); pag++; y = TOP; moldura(); }
+  function cabe(h){ if (y + h > BASE) novaPagina(); }
+  function linhaJustificada(l, x, larg, ultima){
+    const palavras = l.split(' ').filter(Boolean);
+    if (ultima || palavras.length < 2){ doc.text(l, x, y); return; }
+    const soma = palavras.reduce((s, p) => s + doc.getTextWidth(p), 0);
+    const vao = (larg - soma) / (palavras.length - 1);
+    if (vao > doc.getTextWidth(' ') * 3){ doc.text(l, x, y); return; }
+    let xx = x; palavras.forEach(p => { doc.text(p, xx, y); xx += doc.getTextWidth(p) + vao; });
+  }
+  function paragrafo(t, { tam = 11, estilo = 'normal', cor = [0, 0, 0], alinhar = 'justify', antes = 0, depois = 0, entre = 1.3, x = ML, larg = LW } = {}){
+    t = limpar(t); doc.setFont('helvetica', estilo); doc.setFontSize(tam); doc.setTextColor(...cor);
+    const linhas = doc.splitTextToSize(t, larg);
+    y += antes;
+    linhas.forEach((l, k) => {
+      cabe(tam * entre); y += tam * entre;
+      doc.setFont('helvetica', estilo); doc.setFontSize(tam); doc.setTextColor(...cor);
+      if (alinhar === 'center') doc.text(l, x + larg / 2, y, { align: 'center' });
+      else if (alinhar === 'justify') linhaJustificada(l, x, larg, k === linhas.length - 1);
+      else doc.text(l, x, y);
+    });
+    y += depois;
+  }
+  moldura();
+  blocos(S).forEach(b => {
+    if (b.t === 'tit') paragrafo(b.x, { tam: 15, estilo: 'bold', cor: COR, alinhar: 'center', antes: 8 });
+    else if (b.t === 'ref') paragrafo(b.x, { tam: 11, estilo: 'italic', cor: COR, alinhar: 'center', antes: 2 });
+    else if (b.t === 'vers') paragrafo(b.x, { tam: 11, estilo: 'italic', alinhar: 'center', antes: 1 });
+    else if (b.t === 'sec'){
+      cabe(70); y += 20; doc.setDrawColor(190); doc.setLineWidth(0.5); doc.line(ML, y, W - MR, y); y += 8;
+      paragrafo(b.x.toUpperCase(), { tam: 11.5, estilo: 'bold', cor: COR, alinhar: 'left', antes: 6, depois: 8 });
+    }
+    else if (b.t === 'p') paragrafo(b.x);
+    else if (b.t === 'frase'){ cabe(50); paragrafo(b.x, { estilo: 'bold', alinhar: 'center', antes: 12, depois: 10 }); }
+    else if (b.t === 'perg-t'){ cabe(50); paragrafo(b.x, { estilo: 'bold', alinhar: 'left', antes: 6 }); }
+    else if (b.t === 'item'){
+      cabe(30); const ini = y; paragrafo(`${b.r}: ${b.x}`, { x: ML + 16, larg: LW - 16, alinhar: 'left' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.text(b.n + '.', ML + 2, ini + 11 * 1.3);
+    }
+  });
+  return { blob: doc.output('blob'), nome: nomeArquivo(S) + '.pdf' };
+}
+
+/* ---------- DOCX (para quem quiser mexer no Word) ---------- */
+async function docxBlob(S){
+  const D = await carregarScript('docx.min.js', 'docx');
+  const { Document, Paragraph, TextRun, AlignmentType, Packer, Header, Footer, TabStopType, PageNumber, BorderStyle, LevelFormat } = D;
+  const F = [];
+  const sep = () => new Paragraph({ spacing: { before: 240, after: 120 }, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'BBBBBB', space: 1 } }, children: [] });
+  blocos(S).forEach(b => {
+    if (b.t === 'tit') F.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120 }, children: [new TextRun({ text: b.x, bold: true, size: 30, color: BRONZE })] }));
+    else if (b.t === 'ref') F.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: b.x, italics: true, color: BRONZE })] }));
+    else if (b.t === 'vers') F.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: b.x, italics: true })] }));
+    else if (b.t === 'sec'){ F.push(sep()); F.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 160 }, keepNext: true, children: [new TextRun({ text: b.x.toUpperCase(), bold: true, color: BRONZE })] })); }
+    else if (b.t === 'p') F.push(new Paragraph({ children: [new TextRun(b.x)] }));
+    else if (b.t === 'frase') F.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240, after: 200 }, children: [new TextRun({ text: b.x, bold: true })] }));
+    else if (b.t === 'perg-t') F.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 120 }, keepNext: true, children: [new TextRun({ text: b.x, bold: true })] }));
+    else if (b.t === 'item') F.push(new Paragraph({ numbering: { reference: 'passos', level: 0 }, alignment: AlignmentType.LEFT, children: [new TextRun({ text: b.r + ': ', bold: true }), new TextRun(b.x)] }));
+  });
+  const cab = new Header({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: 9638 }], border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '333333', space: 6 } },
+    children: [new TextRun({ text: 'Igreja Vidas', font: 'Calibri', size: 20 }), new TextRun({ text: '\t' + cabecalho(), font: 'Calibri', size: 20 })] })] });
+  const rod = new Footer({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Página  ', font: 'Calibri', size: 18 }), new TextRun({ children: [PageNumber.CURRENT], font: 'Calibri', size: 18 })] })] });
+  const doc = new Document({
+    creator: 'Canivete · Ateliê do Estudo', title: nomeArquivo(S),
+    styles: { default: { document: { run: { font: 'Arial', size: 22 }, paragraph: { alignment: AlignmentType.JUSTIFIED } } } },
+    numbering: { config: [{ reference: 'passos', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 360, hanging: 360 } } } }] }] },
+    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1418, bottom: 1134, left: 1134, right: 1134, header: 567, footer: 454 } } },
+      headers: { default: cab }, footers: { default: rod }, children: F }]
+  });
+  return { blob: await Packer.toBlob(doc), nome: nomeArquivo(S) + '.docx' };
+}
+
+/* ---------- texto simples para o KTL ---------- */
+function textoKTL(S){
+  return blocos(S).map(b => b.t === 'sec' ? '\n' + b.x.toUpperCase() : b.t === 'frase' ? '\n' + b.x + '\n' : b.t === 'item' ? `${b.n}. ${b.r}: ${b.x}` : b.t === 'vers' ? '{' + b.x + '}' : b.x)
+    .join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+async function exportar(tipo){
+  salvarFolha(); const S = E[aba]; if (!S) return;
+  const btn = tipo === 'pdf' ? $('#bPdf') : $('#bDocx'); const rot = btn.textContent; btn.disabled = true; btn.textContent = 'Gerando…';
+  try { const r = tipo === 'pdf' ? await pdfBlob(S) : await docxBlob(S); baixarBlob(r.blob, r.nome); $('#ktlMsg').textContent = 'Baixado: ' + r.nome; }
+  catch (e){ $('#ktlMsg').textContent = 'Não consegui gerar: ' + (e.message || e); }
+  btn.disabled = false; btn.textContent = rot;
+}
+$('#bPdf').onclick = () => exportar('pdf');
+$('#bDocx').onclick = () => exportar('docx');
+
+async function salvarNoKtl(){
+  salvarFolha(); lerCampos();
+  const versoes = ['adultos', 'adolescentes'].filter(v => E[v]);
+  if (!E.campos.data){ $('#ktlMsg').textContent = 'Preencha a data do estudo.'; return; }
+  if (!E.campos.numero){ $('#ktlMsg').textContent = 'Preencha o número do estudo.'; return; }
+  const btn = $('#bKtl'); btn.disabled = true; $('#ktlMsg').textContent = 'Salvando no KTL…';
+  const feitos = [];
+  try {
+    const c = await clienteLogado();
+    for (const v of versoes){
+      const S = E[v];
+      const r = await c.rpc('canivete_salvar_estudo', { p_data: E.campos.data, p_titulo: nomeArquivo(S), p_ref: S.ref || '', p_tema: E.campos.tema || '', p_adolescentes: v === 'adolescentes', p_conteudo: textoKTL(S) });
+      if (r.error){
+        if (/canivete_salvar_estudo|function/i.test(r.error.message || '')) throw new Error('falta rodar no Supabase o arquivo canivete_estudo.sql.');
+        throw r.error;
+      }
+      const res = (r.data || [])[0] || {};
+      feitos.push(`${v === 'adultos' ? 'Adultos' : 'Adolescentes'} ${res.acao === 'atualizado' ? 'atualizado' : 'criado'}`);
+    }
+    $('#ktlMsg').innerHTML = `Salvo no KTL ✓ ${feitos.join(' · ')} (${dataBR(E.campos.data)}). Já aparece na Memória.${versoes.length < 2 ? ' A versão dos adolescentes ainda não foi gerada.' : ''}`;
+  } catch (e){ $('#ktlMsg').textContent = 'Não consegui salvar: ' + (e.message || e) + (feitos.length ? ' (' + feitos.join(' · ') + ')' : ''); }
+  btn.disabled = false;
+}
+$('#bKtl').onclick = salvarNoKtl;
+
+/* =====================================================================
+   INÍCIO
+   ===================================================================== */
+(async function iniciar(){
+  preencherCampos();
+  if (!$('#cData').value) $('#cData').value = proximaQuarta();
+  if (!$('#cAno').value){ const a = +$('#cData').value.slice(0, 4); $('#cAno').value = `${a} – ${TEMAS_ANO[a] || ''}`; }
+  $('#mes').value = (E.dev && E.dev.data ? E.dev.data : $('#cData').value).slice(0, 7);
+  lerCampos(); mostrarLeitura(); pintarFolha(); travar(false);
+  if (E.adultos) $('#msg').innerHTML = `<div class="aviso">Continuando o estudo “${esc(E.adultos.titulo)}”.</div>`;
+  $('#mes').addEventListener('change', carregarMes);
+  carregarMes();
+  if (!E.campos.numero) sugerirNumero().then(lerCampos);
+})();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
+</script>
+</body>
+</html>
