@@ -10,7 +10,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.4.1"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.5.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -57,6 +58,45 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .folha .frase{text-align:center;font-weight:700;margin:14px 0}
 .folha .frase span{background:#FFFF00}
 .folha .nota-cortado{display:none}
+
+/* ---------- slides ---------- */
+.slides-sec{display:none;margin-top:28px}
+.slides-sec.ativa{display:block}
+.slides-sec h2{font-family:Cinzel,serif;font-size:14px;letter-spacing:2px;color:var(--ouroTexto);margin:0 0 10px}
+.paletas{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.paleta{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);font-size:14px}
+.paleta.ativa{border-color:var(--ouro);box-shadow:0 0 0 2px var(--ouro) inset}
+.paleta i{width:20px;height:20px;border-radius:6px;display:inline-block;border:1px solid rgba(255,255,255,.25)}
+.paleta input[type=color]{width:30px;height:26px;border:none;background:none;padding:0}
+.grade-slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.sl{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;container-type:inline-size;background:var(--s-fundo);color:var(--s-texto);font-family:Inter,Helvetica,Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.sl.claro{background:var(--s-claro);color:var(--s-escuro)}
+.sl.final{background:var(--s-final)}
+.sl .n{position:absolute;left:6px;bottom:4px;font-size:10px;opacity:.5}
+.sl [contenteditable]{outline:none;border-radius:3px}
+.sl [contenteditable]:focus{box-shadow:0 0 0 2px var(--ouro)}
+.sl .cx{position:absolute;inset:9% 7%;display:flex;flex-direction:column}
+.sl .barrinha{width:7cqw;height:.6cqw;background:var(--s-acento);margin-bottom:2.5cqw}
+.sl .t-capa{font-size:6.2cqw;font-weight:700;line-height:1.1}
+.sl .ref{font-size:2.3cqw;font-weight:700;color:var(--s-acento);margin-top:2cqw}
+.sl .vers{font-size:3.6cqw;line-height:1.5}
+.sl .vers sup{font-size:1.8cqw;color:var(--s-acento);font-weight:700}
+.sl .rot{font-size:1.9cqw;font-weight:700;letter-spacing:.1em;color:var(--s-acento-claro)}
+.sl .abre{font-size:4.6cqw;font-weight:700;line-height:1.15;margin-top:3cqw}
+.sl .ref-claro{font-size:1.9cqw;margin-top:auto;opacity:.7}
+.sl .num{font-size:7cqw;font-weight:700;color:var(--s-acento);line-height:1}
+.sl .t-ponto{font-size:5cqw;font-weight:700;line-height:1.12;margin-top:auto}
+.sl .subref{font-size:2cqw;font-weight:700;color:var(--s-acento);margin-top:4cqw}
+.sl .meio{position:absolute;inset:8% 7%;display:flex;align-items:center;justify-content:center;text-align:center}
+.sl .frase-s{font-size:4.8cqw;font-weight:700;line-height:1.2}
+.sl .t-conc{font-size:3.2cqw;font-weight:700;color:var(--s-acento-claro)}
+.sl .linhas{margin-top:2cqw;display:flex;flex-direction:column}
+.sl .linha-c{display:grid;grid-template-columns:32% 1fr;align-items:baseline;border-top:.25cqw solid var(--s-acento);padding:1.2cqw 0}
+.sl .linha-c b{font-size:3.6cqw}
+.sl .linha-c span{font-size:2.8cqw;opacity:.85}
+.biblia-cola{display:none;margin:10px 0 14px}
+.biblia-cola.ativa{display:block}
+.biblia-cola textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);padding:12px;font:inherit;font-size:15px}
 @media (max-width:640px){ .folha{padding:28px 20px;font-size:15px} }
 </style>
 </head>
@@ -93,10 +133,29 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <span class="sep"></span>
     <span class="salvo" id="salvo" aria-live="polite"></span>
     <button class="btn" type="button" id="bOutro">Outro arquivo</button>
+    <button class="btn" type="button" id="bSlides">Gerar slides</button>
     <button class="btn ouro" type="button" id="bBaixar">Baixar DOCX</button>
   </div>
 
   <article class="folha" id="folha" contenteditable="true" spellcheck="true" aria-label="Sermão diagramado"></article>
+
+  <section class="slides-sec" id="slidesSec" aria-labelledby="hSlides">
+    <h2 id="hSlides">SLIDES</h2>
+    <div class="paletas" id="paletas" role="radiogroup" aria-label="Cor dos slides"></div>
+    <div id="slMsg" class="aviso"></div>
+    <div class="biblia-cola" id="bibliaCola">
+      <label for="txtBiblia" class="aviso" style="display:block;margin-bottom:6px">Não achei o texto bíblico neste aparelho. Cole aqui o texto (NAA), com o número de cada versículo no começo:</label>
+      <textarea id="txtBiblia" placeholder="25 Por volta da meia-noite, Paulo e Silas oravam…&#10;26 De repente, sobreveio…"></textarea>
+      <button class="btn" type="button" id="bUsarTexto" style="margin-top:8px">Usar este texto</button>
+    </div>
+    <div class="grade-slides" id="gradeSlides"></div>
+    <div class="botoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn" type="button" id="bRefazer">Refazer slides</button>
+      <button class="btn ouro" type="button" id="bPdf">Baixar PDF dos slides</button>
+    </div>
+    <p class="aviso">Toque em qualquer texto de um slide para corrigir. O PDF tem uma página por slide, pronto para o Pregador.</p>
+  </section>
+
 </div>
 
 <script>
@@ -111,7 +170,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.4.1';
+const VERSAO = '0.5.0';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -187,7 +246,7 @@ function diagramar(html){
   const d = new DOMParser().parseFromString('<div id="r">' + html + '</div>', 'text/html');
   const ps = [...d.getElementById('r').children].filter(p => p.textContent.trim());
   if (!ps.length) throw new Error('O arquivo parece vazio.');
-  let out = '', modo = 'corpo', secao = '', ref = '', lista = false;
+  let out = '', modo = 'corpo', secao = '', ref = '', lista = false, bigIdea = '';
   const fecharLista = () => { if (lista){ out += '</ul>'; lista = false; } };
   const bullet = h => { if (!lista){ out += '<ul>'; lista = true; } out += '<li>' + h + '</li>'; };
   const titulo = ps[0].textContent.trim();
@@ -195,6 +254,7 @@ function diagramar(html){
   for (const p of ps.slice(1)){
     const t = p.textContent.trim(), tl = t.toLowerCase().replace(/:$/, '');
     if (FIM.test(t)) break;                                                    // Desafio Final, Apelo, Resumindo: fora
+    const mb = t.match(/big idea\s*:\s*(.+)$/i); if (mb && !bigIdea) bigIdea = mb[1].trim();
     const mt = t.match(/^texto\s*:\s*(.+?)(?:\s+big idea\s*:.*)?$/i);
     if (mt){ fecharLista(); ref = mt[1].trim().replace(/(\d+)\.(\d+)/, '$1:$2'); out += `<p class="texto-base"><b class="rot">TEXTO</b>: ${esc(ref)}</p>`; continue; }
     if (tl.startsWith('big idea')) continue;
@@ -216,7 +276,7 @@ function diagramar(html){
     for (const [a, b] of agrupar(fs, s.txt)) bullet(htmlTrecho(s, a, b, extra));
   }
   fecharLista();
-  return { html: out, titulo, ref };
+  return { html: out, titulo, ref, bigIdea };
 }
 
 /* =====================================================================
@@ -272,7 +332,7 @@ function tirarBullet(e){
 }
 $('#bTirar').addEventListener('mousedown', tirarBullet);
 $('#bTirar').addEventListener('touchend', tirarBullet);
-$('#bOutro').onclick = () => { if (confirmarTroca()){ atual = null; gravarLS('atelie.rascunho', null); $('#msg').innerHTML = ''; mostrar(); } };
+$('#bOutro').onclick = () => { if (confirmarTroca()){ atual = null; gravarLS('atelie.rascunho', null); $('#msg').innerHTML = ''; $('#slidesSec').classList.remove('ativa'); mostrar(); } };
 function confirmarTroca(){ return !atual || window.confirm('Começar com outro arquivo? A revisão deste sermão será descartada (baixe o DOCX antes, se quiser).'); }
 
 /* =====================================================================
@@ -358,7 +418,312 @@ async function baixar(){
 }
 $('#bBaixar').onclick = baixar;
 
+/* =====================================================================
+   4. SLIDES — mesma estrutura dos slides do Bispo
+   capa · texto bíblico (2–3 versículos por slide) · abertura · para cada ponto:
+   número/título/sub-referência e a frase de impacto · conclusão · ideia central
+   ===================================================================== */
+const PALETAS = {
+  marrom:  { nome: 'Marrom',       fundo: '#2B1D16', acento: '#C49A6C', claro: '#F2ECE4', final: '#5A3A26', acentoClaro: '#8A5A2E' },
+  marinho: { nome: 'Azul-marinho', fundo: '#0F1B33', acento: '#C9A227', claro: '#EEF1F6', final: '#1E3157', acentoClaro: '#7D600B' },
+  verde:   { nome: 'Verde-escuro', fundo: '#12261D', acento: '#D4B26A', claro: '#EEF3EE', final: '#1F3D2F', acentoClaro: '#5B7A3A' },
+  vinho:   { nome: 'Vinho',        fundo: '#2E0F16', acento: '#D9A38F', claro: '#F5ECEC', final: '#4E1A25', acentoClaro: '#8E3B47' },
+  grafite: { nome: 'Grafite',      fundo: '#1C1D21', acento: '#E0B04F', claro: '#EFEFEF', final: '#34363C', acentoClaro: '#8A6A14' }
+};
+const ESCURO = '#1A1A1A';
+let paletaId = lerLS('atelie.paleta', 'marrom');
+let corPropria = lerLS('atelie.corPropria', '#20283A');
+
+function misturar(hex, alvo, t){ const a = parseInt(hex.slice(1), 16), b = parseInt(alvo.slice(1), 16);
+  const c = [16, 8, 0].map(s => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t));
+  return '#' + c.map(x => x.toString(16).padStart(2, '0')).join(''); }
+function paleta(){
+  if (paletaId !== 'propria') return PALETAS[paletaId] || PALETAS.marrom;
+  return { nome: 'Sua cor', fundo: corPropria, acento: '#D9B64A', claro: misturar(corPropria, '#FFFFFF', 0.92), final: misturar(corPropria, '#FFFFFF', 0.16), acentoClaro: misturar(corPropria, '#000000', 0.1) };
+}
+function aplicarPaleta(){
+  const p = paleta(), g = $('#gradeSlides');
+  g.style.setProperty('--s-fundo', p.fundo); g.style.setProperty('--s-acento', p.acento); g.style.setProperty('--s-claro', p.claro);
+  g.style.setProperty('--s-final', p.final); g.style.setProperty('--s-acento-claro', p.acentoClaro); g.style.setProperty('--s-texto', '#F7F2EA'); g.style.setProperty('--s-escuro', ESCURO);
+  pintarPaletas();
+}
+function pintarPaletas(){
+  $('#paletas').innerHTML = Object.entries(PALETAS).map(([id, p]) =>
+    `<button class="paleta${paletaId === id ? ' ativa' : ''}" type="button" role="radio" aria-checked="${paletaId === id}" data-p="${id}"><i style="background:${p.fundo}"></i>${esc(p.nome)}</button>`).join('') +
+    `<label class="paleta${paletaId === 'propria' ? ' ativa' : ''}"><input type="color" id="corPropria" value="${esc(corPropria)}" aria-label="Escolher outra cor de fundo"> Outra cor</label>`;
+  $('#paletas').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { paletaId = b.dataset.p; gravarLS('atelie.paleta', paletaId); aplicarPaleta(); });
+  $('#corPropria').oninput = e => { corPropria = e.target.value; paletaId = 'propria'; gravarLS('atelie.corPropria', corPropria); gravarLS('atelie.paleta', paletaId); aplicarPaleta(); };
+}
+
+/* "A CASA QUE FOI BATIZADA" → "A casa que foi batizada" (mantém nomes divinos e próprios comuns) */
+const NOMES_PROPRIOS = /\b(deus|jesus|cristo|senhor|espírito|santo|pai|filho|paulo|silas|pedro|joão|maria|davi|moisés|abraão|israel|jerusalém|filipos|igreja)\b/gi;
+function frasear(t){
+  t = String(t || '').trim(); if (!t) return t;
+  if (t !== t.toUpperCase()) return t;
+  t = t.toLowerCase().replace(NOMES_PROPRIOS, w => w[0].toUpperCase() + w.slice(1));
+  return t[0].toUpperCase() + t.slice(1);
+}
+const traco = r => String(r || '').replace(/(\d)-(\d)/g, '$1–$2');
+
+/* Lê a folha revisada: título, abertura, pontos (título + frase de impacto), conclusão */
+function lerFolha(){
+  const f = $('#folha'); const els = [...f.children];
+  const r = { titulo: frasear(atual.titulo), ref: atual.ref || '', abertura: '', pontos: [], conclusao: [], bigIdea: atual.bigIdea || '' };
+  let secao = '', ponto = null, introUl = [];
+  els.forEach(el => {
+    if (el.classList.contains('secao')){
+      const t = el.textContent.trim(); const m = t.match(/^(\d+)\.\s*(.+)$/);
+      secao = m ? 'ponto' : t.toLowerCase();
+      if (m){ ponto = { num: m[1], titulo: frasear(m[2]), frase: '', textos: '' }; r.pontos.push(ponto); }
+      return;
+    }
+    if (el.classList.contains('frase') && ponto && !ponto.frase){ ponto.frase = el.textContent.trim(); return; }
+    if (el.nodeName === 'UL'){
+      const lis = [...el.querySelectorAll(':scope > li')].map(li => li.textContent.trim()).filter(Boolean);
+      if (secao === 'introdução') introUl.push(...lis);
+      else if (secao === 'ponto' && ponto) ponto.textos += ' ' + lis.join(' ');
+      else if (secao === 'conclusão') r.conclusao.push(...lis);
+    }
+  });
+  r.abertura = introUl[0] || '';
+  if (!r.bigIdea) r.bigIdea = introUl[introUl.length - 1] || '';
+  return r;
+}
+
+/* Referência "Atos 16:25-34" → { livro, cap, v1, cap2, v2 } */
+function lerRef(ref){
+  const m = String(ref).replace(/[–—]/g, '-').match(/^\s*((?:[1-3]|I{1,3})\s*)?([^\d]+?)\s*(\d+)\s*[:.]\s*(\d+)(?:\s*-\s*(?:(\d+)\s*[:.]\s*)?(\d+))?/);
+  if (!m) return null;
+  let pref = (m[1] || '').trim(); if (/^I+$/.test(pref)) pref = String(pref.length);
+  return { nome: (pref ? pref + ' ' : '') + m[2].trim(), livroSemNum: m[2].trim(), cap: +m[3], v1: +m[4], cap2: m[5] ? +m[5] : +m[3], v2: m[6] ? +m[6] : +m[4] };
+}
+/* Sub-referência de um ponto pelos "(v. 27)" citados nos bullets */
+function subrefPelosVersos(rf, textos){
+  if (!rf) return '';
+  const vs = [...String(textos).matchAll(/\bvv?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?/g)].flatMap(m => [+m[1], m[2] ? +m[2] : +m[1]]).filter(v => v >= rf.v1 && v <= (rf.cap2 === rf.cap ? rf.v2 : 999));
+  if (!vs.length) return '';
+  const a = Math.min(...vs), b = Math.max(...vs);
+  return `${rf.nome} ${rf.cap}:${a}${b > a ? '–' + b : ''}`;
+}
+
+/* Texto bíblico: NAA guardada pelo Pregador neste aparelho */
+async function versiculosDoPregador(rf, sigla = 'NAA'){
+  if (!rf || !window.PVBiblia) return [];
+  const id = window.PVBiblia.idDoNome(rf.nome) || window.PVBiblia.idDoNome(rf.livroSemNum);
+  if (!id) return [];
+  const out = [];
+  for (let c = rf.cap; c <= rf.cap2; c++){
+    const ini = c === rf.cap ? rf.v1 : 1, fim = c === rf.cap2 ? rf.v2 : 200;
+    for (let v = ini; v <= fim; v++){
+      let t = '';
+      try { t = await window.PVBiblia.texto(sigla, { livro: id, cap: c, faixas: [[v, v]] }); } catch {}
+      if (!t){ if (c < rf.cap2) break; else continue; }
+      out.push({ n: v, t: t.replace(/^[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+\s*/, '').trim() });
+    }
+  }
+  return out;
+}
+function versiculosColados(txt){
+  const out = []; const re = /(?:^|\s)(\d{1,3})\s+([^\d][\s\S]*?)(?=\s\d{1,3}\s+[^\d]|$)/g; let m;
+  while ((m = re.exec(txt.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, d => ' ' + [...d].map(c => '⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)).join('') + ' ')))) out.push({ n: +m[1], t: m[2].trim() });
+  return out;
+}
+function blocosDeVersos(vs){
+  const blocos = []; let at = [];
+  const tam = b => b.reduce((s, v) => s + v.t.length + 4, 0);
+  vs.forEach(v => { if (at.length && (at.length >= 3 || tam(at) + v.t.length > 240)){ blocos.push(at); at = []; } at.push(v); });
+  if (at.length) blocos.push(at);
+  return blocos;
+}
+
+/* IA: rótulo da abertura, sub-referências e quadro da conclusão (só o que não dá para tirar do sermão) */
+async function pedirIA(base){
+  const pedido = `Sermão: "${base.titulo}" (${base.ref}).
+Pontos:
+${base.pontos.map(p => `${p.num}. ${p.titulo} — trechos: ${p.textos.slice(0, 600)}`).join('\n')}
+Conclusão:
+${base.conclusao.join('\n')}
+
+Responda SOMENTE com um objeto JSON, sem texto antes ou depois:
+{"rotulo_abertura": "2 a 4 palavras em MAIÚSCULAS que situam a cena (ex.: MEIA-NOITE EM FILIPOS)",
+ "subrefs": ["a passagem exata de cada ponto dentro de ${base.ref}, no formato Livro cap:v–v", ...] (uma por ponto, na ordem),
+ "conclusao": {"rotulo": "2 a 3 palavras em MAIÚSCULAS", "linhas": [["Verbo ou palavra-chave", "complemento curto, até 6 palavras"], ...] (3 a 5 linhas que resumem o movimento do sermão)}}`;
+  const sistema = 'Você ajuda um bispo a montar os slides do sermão dele. Seja fiel ao texto do sermão; não invente conteúdo novo. Português do Brasil.';
+  const r = await fetch('https://promptflow-ia.eneaspr.workers.dev', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 900, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n' + pedido }] }) });
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('HTTP ' + r.status));
+  const txt = (j.content || []).map(c => c.text || '').join('');
+  return JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
+}
+
+async function gerarSlides(){
+  if (!atual) return;
+  $('#slidesSec').classList.add('ativa');
+  $('#slMsg').textContent = 'Montando os slides…';
+  $('#gradeSlides').innerHTML = '';
+  const base = lerFolha();
+  const rf = lerRef(base.ref);
+  // texto bíblico
+  let vs = await versiculosDoPregador(rf);
+  const colado = lerLS('atelie.textoColado.' + base.ref, '');
+  if (!vs.length && colado) vs = versiculosColados(colado);
+  $('#bibliaCola').classList.toggle('ativa', !vs.length);
+  // IA (com plano B se falhar)
+  let ia = null;
+  try { ia = await pedirIA(base); } catch (e){ $('#slMsg').textContent = 'A IA não respondeu (' + (e.message || e) + '); usei só o que está no sermão.'; }
+  const S = [];
+  S.push({ tipo: 'capa', titulo: base.titulo, ref: traco(base.ref) });
+  blocosDeVersos(vs).forEach(b => S.push({ tipo: 'texto', versos: b }));
+  if (base.abertura) S.push({ tipo: 'abertura', rotulo: (ia && ia.rotulo_abertura) || '', texto: base.abertura, ref: traco(base.ref) });
+  base.pontos.forEach((p, i) => {
+    const sub = (ia && ia.subrefs && ia.subrefs[i]) || subrefPelosVersos(rf, p.textos) || base.ref;
+    S.push({ tipo: 'ponto', num: p.num, titulo: p.titulo, ref: traco(sub) });
+    if (p.frase) S.push({ tipo: 'frase', texto: p.frase });
+  });
+  if (ia && ia.conclusao && Array.isArray(ia.conclusao.linhas) && ia.conclusao.linhas.length)
+    S.push({ tipo: 'conclusao', rotulo: ia.conclusao.rotulo || '', linhas: ia.conclusao.linhas.slice(0, 5).map(l => [String(l[0] || ''), String(l[1] || '')]) });
+  if (base.bigIdea) S.push({ tipo: 'final', texto: base.bigIdea });
+  atual.slides = S; gravarLS('atelie.rascunho', atual);
+  if (!/não respondeu/.test($('#slMsg').textContent)) $('#slMsg').textContent = `${S.length} slides${vs.length ? '' : ' (falta o texto bíblico)'}. Escolha a cor e confira.`;
+  pintarSlides();
+  $('#slidesSec').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* Prévia editável: cada campo com data-c="índice|campo" */
+function ed(i, campo, html, cls){ return `<div class="${cls}" contenteditable="true" data-c="${i}|${campo}">${html}</div>`; }
+function pintarSlides(){
+  const S = (atual && atual.slides) || [];
+  $('#gradeSlides').innerHTML = S.map((s, i) => {
+    let h = '';
+    if (s.tipo === 'capa') h = `<div class="cx" style="justify-content:center"><div class="barrinha"></div>${ed(i, 'titulo', esc(s.titulo), 't-capa')}${ed(i, 'ref', esc(s.ref), 'ref')}</div>`;
+    if (s.tipo === 'texto') h = `<div class="cx">${s.versos.map((v, k) => `<div class="vers" contenteditable="true" data-c="${i}|v${k}"><sup>${v.n}</sup> ${esc(v.t)}</div>`).join('')}</div>`;
+    if (s.tipo === 'abertura') h = `<div class="cx">${ed(i, 'rotulo', esc(s.rotulo), 'rot')}${ed(i, 'texto', esc(s.texto), 'abre')}${ed(i, 'ref', esc(s.ref), 'ref-claro')}</div>`;
+    if (s.tipo === 'ponto') h = `<div class="cx">${ed(i, 'num', esc(s.num), 'num')}${ed(i, 'titulo', esc(s.titulo), 't-ponto')}${ed(i, 'ref', esc(s.ref), 'subref')}</div>`;
+    if (s.tipo === 'frase' || s.tipo === 'final') h = `<div class="meio">${ed(i, 'texto', esc(s.texto), 'frase-s')}</div>`;
+    if (s.tipo === 'conclusao') h = `<div class="cx"><div class="t-conc">CONCLUSÃO</div>${ed(i, 'rotulo', esc(s.rotulo), 'rot')}<div class="linhas">${s.linhas.map((l, k) =>
+      `<div class="linha-c"><b contenteditable="true" data-c="${i}|l${k}a">${esc(l[0])}</b><span contenteditable="true" data-c="${i}|l${k}b">${esc(l[1])}</span></div>`).join('')}</div></div>`;
+    const cls = s.tipo === 'abertura' || s.tipo === 'conclusao' ? ' claro' : s.tipo === 'final' ? ' final' : '';
+    return `<div class="sl${cls}" aria-label="Slide ${i + 1}">${h}<span class="n">${i + 1}</span></div>`;
+  }).join('');
+  $('#gradeSlides').querySelectorAll('[data-c]').forEach(el => el.addEventListener('input', () => {
+    const [i, campo] = el.dataset.c.split('|'); const s = atual.slides[+i]; const txt = el.textContent.replace(/\s+/g, ' ').trim();
+    if (/^v\d+$/.test(campo)){ const k = +campo.slice(1); s.versos[k].t = txt.replace(/^\d+\s*/, ''); }
+    else if (/^l\d+[ab]$/.test(campo)){ const k = +campo.slice(1, -1); s.linhas[k][campo.endsWith('a') ? 0 : 1] = txt; }
+    else s[campo] = txt;
+    gravarLS('atelie.rascunho', atual);
+  }));
+  aplicarPaleta();
+}
+
+$('#bSlides').onclick = gerarSlides;
+$('#bRefazer').onclick = () => { if (!atual.slides || window.confirm('Refazer os slides a partir da folha? As correções feitas nos slides serão perdidas.')) gerarSlides(); };
+$('#bUsarTexto').onclick = () => { if (!atual) return; gravarLS('atelie.textoColado.' + (atual.ref || ''), $('#txtBiblia').value); gerarSlides(); };
+
+/* ---------- PDF (jsPDF, desenhado à mão para ficar nítido na projeção) ---------- */
+let _jspdf = null;
+function carregarJsPDF(){
+  if (window.jspdf) return Promise.resolve(window.jspdf);
+  if (!_jspdf) _jspdf = new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = 'jspdf.umd.min.js';
+    sc.onload = () => window.jspdf ? ok(window.jspdf) : erro(new Error('jsPDF')); sc.onerror = () => { _jspdf = null; erro(new Error('não carregou o jsPDF')); }; document.head.appendChild(sc); });
+  return _jspdf;
+}
+/* A fonte padrão do PDF não tem alguns caracteres (ex.: ō do grego transliterado): troca pelo mais próximo */
+const PERMITIDOS = '—–“”‘’…•€';
+const limpar = t => [...String(t || '')].map(c => c.charCodeAt(0) <= 255 || PERMITIDOS.includes(c) ? c : c.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\x00-\xff]/g, '')).join('');
+function rgb(hex){ const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+
+async function baixarPdf(){
+  if (!atual || !atual.slides) return;
+  const btn = $('#bPdf'); btn.disabled = true; btn.textContent = 'Gerando…';
+  try {
+    const { jsPDF } = await carregarJsPDF();
+    const W = 960, H = 540, P = paleta();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [W, H] });
+    const cor = h => doc.setTextColor(...rgb(h));
+    // texto que cabe na caixa: diminui a fonte até caber
+    function caixa(t, x, y, w, h, { tam = 40, min = 18, estilo = 'bold', alinhar = 'left', entre = 1.18, meio = false, base = 'top' } = {}){
+      t = limpar(t); let linhas, s = tam;
+      for (; s >= min; s -= 1){ doc.setFont('helvetica', estilo); doc.setFontSize(s); linhas = doc.splitTextToSize(t, w); if (linhas.length * s * entre <= h) break; }
+      const alt = linhas.length * s * entre;
+      let y0 = meio ? y + (h - alt) / 2 : base === 'bottom' ? y + h - alt : y;
+      linhas.forEach((l, k) => doc.text(l, alinhar === 'center' ? x + w / 2 : x, y0 + s * 0.85 + k * s * entre, { align: alinhar }));
+      return y0 + alt;
+    }
+    atual.slides.forEach((s, i) => {
+      if (i) doc.addPage([W, H], 'landscape');
+      const claro = s.tipo === 'abertura' || s.tipo === 'conclusao';
+      doc.setFillColor(...rgb(claro ? P.claro : s.tipo === 'final' ? P.final : P.fundo)); doc.rect(0, 0, W, H, 'F');
+      const txt = claro ? ESCURO : '#F7F2EA';
+      const X = 67, LW = W - 2 * X;
+      if (s.tipo === 'capa'){
+        doc.setFillColor(...rgb(P.acento)); doc.rect(X, 196, 64, 5, 'F');
+        cor(txt); const y = caixa(s.titulo, X, 222, LW, 140, { tam: 60, min: 34 });
+        cor(P.acento); caixa(s.ref, X, y + 18, LW, 40, { tam: 22, min: 16 });
+      }
+      if (s.tipo === 'texto'){
+        // versículos com o número pequeno, em cor de destaque, acima da linha
+        let s0 = 36, linhas;
+        const montar = tam => {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(tam);
+          const itens = []; s.versos.forEach(v => { itens.push({ n: String(v.n) }); limpar(v.t).split(/\s+/).forEach(p => itens.push({ p })); });
+          const out = []; let lin = [], larg = 0, esp = doc.getTextWidth(' ');
+          itens.forEach(it => {
+            const w = it.n ? (doc.setFontSize(tam * 0.55), doc.setFont('helvetica', 'bold'), doc.getTextWidth(it.n) + 3) : (doc.setFontSize(tam), doc.setFont('helvetica', 'normal'), doc.getTextWidth(it.p));
+            if (lin.length && (it.n || larg + esp + w > LW)){ out.push(lin); lin = []; larg = 0; }   // cada versículo começa em linha nova
+            lin.push({ ...it, w }); larg += (lin.length > 1 ? esp : 0) + w;
+          });
+          if (lin.length) out.push(lin);
+          return out;
+        };
+        for (; s0 >= 22; s0--){ linhas = montar(s0); if (linhas.length * s0 * 1.5 <= H - 110) break; }
+        let y = 60 + s0;
+        linhas.forEach(l => {
+          let x = X; doc.setFontSize(s0); const esp = (doc.setFont('helvetica', 'normal'), doc.getTextWidth(' '));
+          l.forEach((it, k) => {
+            if (k) x += esp;
+            if (it.n){ doc.setFont('helvetica', 'bold'); doc.setFontSize(s0 * 0.55); cor(P.acento); doc.text(it.n, x, y - s0 * 0.38); }
+            else { doc.setFont('helvetica', 'normal'); doc.setFontSize(s0); cor('#F7F2EA'); doc.text(it.p, x, y); }
+            x += it.w;
+          });
+          y += s0 * 1.5;
+        });
+      }
+      if (s.tipo === 'abertura'){
+        cor(P.acentoClaro); caixa((s.rotulo || '').toUpperCase(), X, 60, LW, 24, { tam: 17, min: 12 });
+        cor(ESCURO); caixa(s.texto, X, 100, LW, 300, { tam: 46, min: 28 });
+        doc.setTextColor(110, 110, 110); caixa(s.ref, X, H - 90, LW, 30, { tam: 18, min: 14, estilo: 'normal' });
+      }
+      if (s.tipo === 'ponto'){
+        cor(P.acento); caixa(s.num, X, 50, 200, 80, { tam: 72, min: 72 });
+        cor('#F7F2EA'); caixa(s.titulo, X, 170, LW, 220, { tam: 50, min: 30, base: 'bottom' });
+        cor(P.acento); caixa(s.ref, X, H - 100, LW, 30, { tam: 20, min: 16 });
+      }
+      if (s.tipo === 'frase' || s.tipo === 'final'){
+        cor('#F7F2EA'); caixa(s.texto, X, 50, LW, H - 100, { tam: 48, min: 28, alinhar: 'center', meio: true });
+      }
+      if (s.tipo === 'conclusao'){
+        cor(P.acentoClaro); caixa('CONCLUSÃO', X, 50, LW, 40, { tam: 32, min: 24 });
+        caixa((s.rotulo || '').toUpperCase(), X, 98, LW, 24, { tam: 16, min: 12 });
+        let y = 132; const alt = Math.min(80, (H - 170) / Math.max(1, s.linhas.length));
+        s.linhas.forEach(l => {
+          doc.setDrawColor(...rgb(P.acento)); doc.setLineWidth(2); doc.line(X, y, W - X, y);
+          cor(ESCURO); caixa(l[0], X, y + 12, 300, alt - 16, { tam: 36, min: 20 });
+          doc.setTextColor(70, 70, 70); caixa(l[1], X + 320, y + 18, LW - 320, alt - 16, { tam: 28, min: 16, estilo: 'normal' });
+          y += alt;
+        });
+      }
+    });
+    const nome = `${(atual.titulo || 'Sermão').toUpperCase()}${atual.ref ? ' - ' + atual.ref.replace(/:/g, '.') : ''} - slides.pdf`.replace(/[\\/?%*|"<>]/g, '');
+    doc.save(nome);
+    $('#slMsg').textContent = 'PDF gerado: ' + nome;
+  } catch (e){ $('#slMsg').textContent = 'Não consegui gerar o PDF: ' + (e.message || e); }
+  btn.disabled = false; btn.textContent = 'Baixar PDF dos slides';
+}
+$('#bPdf').onclick = baixarPdf;
+
 mostrar(); marcarBrancos();
+if (atual && atual.slides){ $('#slidesSec').classList.add('ativa'); pintarSlides(); }
 if (atual) $('#msg').innerHTML = `<div class="aviso">Continuando a revisão de “${esc(atual.titulo)}”.</div>`;
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
