@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.3" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.4" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.8.3';
+const VERSAO = '0.8.4';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -322,7 +322,7 @@ const REGRAS_SAIDA = `
 
 REGRAS DE SAÍDA (obrigatórias):
 - Português do Brasil. Nenhuma palavra em espanhol.
-- Responda SOMENTE com um objeto JSON válido, sem texto antes ou depois, sem crases.
+- Siga exatamente o formato de resposta pedido no fim de cada pedido.
 - Parágrafos curtos: cada item de uma lista de parágrafos tem de 1 a 3 frases.
 - Nada de Markdown (#, *, **, _), nem rótulos como "Exegese:", "Ilustração:", "Aplicação:", "Transição:" no texto: tudo flui em parágrafos.
 - Citações bíblicas entre aspas, com a referência entre parênteses, por exemplo: "texto" (Atos 2:42).`;
@@ -336,26 +336,64 @@ Como deve ser a versão dos adolescentes:
 - Cada ponto tem aproximadamente 500 a 650 palavras.
 - No fim, um desafio com passos práticos numerados.`;
 
+/* pede à IA e devolve o texto bruto; se a resposta vier cortada pelo tamanho, pede a continuação */
+async function pedirBruto(sistema, pedido, maxTokens, modoJSON){
+  let txt = '';
+  for (let volta = 0; volta < 5; volta++){
+    const msgs = [{ role: 'user', content: sistema + '\n\n---\n\n' + pedido }];
+    if (txt) msgs.push({ role: 'assistant', content: txt.replace(/\s+$/, '') }, { role: 'user', content: 'A resposta foi cortada. Continue EXATAMENTE de onde parou, sem repetir nada e sem nenhum comentário.' });
+    const r = await fetch(IA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: IA_MODELO, max_tokens: maxTokens, system: sistema, messages: msgs }) });
+    const bruto = await r.text();
+    let j; try { j = JSON.parse(bruto); } catch { throw new Error(r.ok ? 'o servidor da IA devolveu uma resposta vazia' : 'o servidor da IA respondeu com erro ' + r.status); }
+    if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('erro ' + r.status));
+    const parte = (j.content || []).filter(c => c.type === 'text' || c.text).map(c => c.text || '').join('');
+    txt += parte;
+    gravarLS('estudo.ultimaIA', { quando: new Date().toISOString(), stop: j.stop_reason, texto: txt.slice(-4000) });
+    const cortada = j.stop_reason === 'max_tokens' || (modoJSON && !j.stop_reason && !/\}\s*(```)?\s*$/.test(txt));
+    if (!cortada) break;
+  }
+  if (!txt.trim()) throw new Error('a IA devolveu uma resposta em branco');
+  return txt;
+}
 async function pedirJSON(sistema, pedido, maxTokens){
   let ultimoErro;
   for (let tentativa = 0; tentativa < 2; tentativa++){
     try {
-      let txt = '';
-      for (let volta = 0; volta < 5; volta++){
-        const msgs = [{ role: 'user', content: sistema + '\n\n---\n\n' + pedido }];
-        if (txt) msgs.push({ role: 'assistant', content: txt }, { role: 'user', content: 'A resposta foi cortada. Continue EXATAMENTE de onde parou (no meio da palavra ou da frase, se for o caso), sem repetir nada e sem nenhum comentário.' });
-        const r = await fetch(IA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: IA_MODELO, max_tokens: maxTokens, system: sistema, messages: msgs }) });
-        const bruto = await r.text();
-        let j; try { j = JSON.parse(bruto); } catch { throw new Error(r.ok ? 'o servidor da IA devolveu uma resposta vazia' : 'o servidor da IA respondeu com erro ' + r.status); }
-        if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('erro ' + r.status));
-        txt += (j.content || []).map(c => c.text || '').join('');
-        const cortada = j.stop_reason === 'max_tokens' || (!j.stop_reason && !/\}\s*(```)?\s*$/.test(txt));
-        if (!cortada) break;
-      }
+      const txt = await pedirBruto(sistema, pedido + '\n\nResponda SOMENTE com o objeto JSON válido, sem texto antes ou depois e sem crases.', maxTokens, true);
       const ini = txt.indexOf('{'), fim = txt.lastIndexOf('}');
-      if (ini < 0 || fim < ini) throw new Error('a resposta da IA veio incompleta');
+      if (ini < 0 || fim < ini) throw new Error('a resposta da IA veio fora do formato');
       return lerJSON(txt.slice(ini, fim + 1));
+    } catch (e){ ultimoErro = e; }
+  }
+  throw ultimoErro;
+}
+/* textos longos: pedidos em TEXTO SIMPLES (sem JSON), com FRASE: e PERGUNTAS: no fim — não tem como "quebrar" */
+const FORMATO_TEXTO = (comFrase) => `
+
+Responda em TEXTO SIMPLES, sem JSON, sem Markdown, sem título e sem comentários antes ou depois. Um parágrafo por linha.${comFrase ? `
+Depois dos parágrafos, termine com exatamente estas duas linhas:
+FRASE: a frase de impacto do ponto
+PERGUNTAS: uma ou duas perguntas para discussão em grupo` : ''}`;
+async function pedirTexto(sistema, pedido, maxTokens){
+  let ultimoErro;
+  for (let tentativa = 0; tentativa < 2; tentativa++){
+    try {
+      const txt = await pedirBruto(sistema, pedido, maxTokens, false);
+      const out = { paragrafos: [], frase: '', perguntas: '' };
+      let campo = null;
+      txt.replace(/\r/g, '').split('\n').forEach(l => {
+        let t = l.trim().replace(/^#+\s*/, '').replace(/\*\*/g, '').replace(/^[*_-]\s+/, '').trim();
+        if (!t || /^```/.test(t)) return;
+        const mf = t.match(/^(?:\*\*)?frase(?: de impacto)?\s*:\s*(.*)$/i), mp = t.match(/^(?:\*\*)?perguntas?(?: para discuss[ãa]o(?: em grupo)?)?\s*:\s*(.*)$/i);
+        if (mf){ campo = 'frase'; out.frase = mf[1]; return; }
+        if (mp){ campo = 'perguntas'; out.perguntas = mp[1]; return; }
+        if (/^(t[íi]tulo|ponto \d)\s*[:–-]/i.test(t) && !out.paragrafos.length) return;
+        if (campo) out[campo] = (out[campo] + ' ' + t).trim(); else out.paragrafos.push(t);
+      });
+      if (out.paragrafos.join(' ').split(/\s+/).length < 60) throw new Error('a resposta da IA veio curta demais');
+      out.frase = limparAspas(out.frase);
+      return out;
     } catch (e){ ultimoErro = e; }
   }
   throw ultimoErro;
@@ -441,31 +479,25 @@ Primeiro, planeje o estudo e escreva a INTRODUÇÃO. Formato:
     // os 3 pontos são escritos ao mesmo tempo (bem mais rápido); depois as 3 segundas metades + o final
     const exegese = k => async () => {
       const pl = est.plano[k], pt = est.pontos[k] || (est.pontos[k] = { titulo: pl.titulo.toUpperCase() });
-      const a = await pedirJSON(sis, dadosDoEstudo() + `
+      const a = await pedirTexto(sis, dadosDoEstudo() + `
 
 PLANO JÁ DEFINIDO:
 ${resumoPlano()}
 
 Escreva a PRIMEIRA METADE do PONTO ${k + 1}: "${pl.titulo}" (${pl.foco}).
-Esta metade é a EXEGESE: explicação do texto a que o ponto se refere (contexto, palavras importantes, sentido), entre 300 e 350 palavras. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.${k ? ' Comece retomando brevemente o ponto anterior ("' + est.plano[k - 1].titulo + '").' : ''}
-Formato:
-{"paragrafos": ["parágrafo", "…"]}`, 1500);
+Esta metade é a EXEGESE: explicação do texto a que o ponto se refere (contexto, palavras importantes, sentido), entre 300 e 350 palavras. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.${k ? ' Comece retomando brevemente o ponto anterior ("' + est.plano[k - 1].titulo + '").' : ''}` + FORMATO_TEXTO(false), 1500);
       pt.parte1 = lista(a.paragrafos);
     };
     const aplicacao = k => async () => {
       const pl = est.plano[k], pt = est.pontos[k];
-      const b = await pedirJSON(sis, dadosDoEstudo() + `
+      const b = await pedirTexto(sis, dadosDoEstudo() + `
 
 PLANO JÁ DEFINIDO:
 ${resumoPlano()}
 
 PONTO ${k + 1}: "${pl.titulo}". A primeira metade (exegese) já está escrita e termina assim: "${pt.parte1.slice(-2).join(' ')}"
 
-Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (analogia, história ou imagem mental clara) e aplicação direta, prática e confrontadora, entre 300 e 400 palavras${k < 2 ? ', terminando com uma transição natural para o ponto ' + (k + 2) + ' ("' + est.plano[k + 1].titulo + '")' : ''}. Depois, a frase de impacto e as perguntas para discussão em grupo.
-Formato:
-{"paragrafos": ["parágrafo", "…"],
- "frase": "a frase de impacto do ponto, sem aspas",
- "perguntas": "uma ou duas perguntas para discussão em grupo, num só parágrafo"}`, 1700);
+Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (analogia, história ou imagem mental clara) e aplicação direta, prática e confrontadora, entre 300 e 400 palavras${k < 2 ? ', terminando com uma transição natural para o ponto ' + (k + 2) + ' ("' + est.plano[k + 1].titulo + '")' : ''}. Depois, a frase de impacto e as perguntas para discussão em grupo.` + FORMATO_TEXTO(true), 1700);
       pt.paragrafos = [...pt.parte1, ...lista(b.paragrafos)];
       pt.frase = limparAspas(b.frase); pt.perguntas = String(b.perguntas || '').trim();
     };
@@ -535,15 +567,10 @@ Formato:
     const titulos = T.titulos || [];
     const ponto = k => async () => {
       const pa = A.pontos[k];
-      const pi = await pedirJSON(sis, base + `\n\nPONTO ${k + 1} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}\nFrase de impacto: ${pa.frase}\nPerguntas: ${pa.perguntas}
+      const pi = await pedirTexto(sis, base + `\n\nPONTO ${k + 1} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}\nFrase de impacto: ${pa.frase}\nPerguntas: ${pa.perguntas}
 
-Adapte SOMENTE este ponto para os adolescentes (400 a 500 palavras), com o título "${titulos[k] || pa.titulo}". Ilustrações novas do mundo deles. Frase de impacto nova, curta e memorável. Perguntas para o grupo de adolescentes.
-Formato:
-{"titulo": "${titulos[k] || pa.titulo}",
- "paragrafos": ["parágrafo", "…"],
- "frase": "frase de impacto, sem aspas",
- "perguntas": "uma ou duas perguntas, num só parágrafo"}`, 2000);
-      T.pontos[k] = { titulo: String(pi.titulo || titulos[k] || pa.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() };
+Adapte SOMENTE este ponto para os adolescentes (400 a 500 palavras), com o título "${titulos[k] || pa.titulo}". Ilustrações novas do mundo deles. Frase de impacto nova, curta e memorável. Perguntas para o grupo de adolescentes.` + FORMATO_TEXTO(true), 2000);
+      T.pontos[k] = { titulo: String(titulos[k] || pa.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() };
     };
     const final = async () => {
       const pf = await pedirJSON(sis, base + `\n\nCONCLUSÃO DOS ADULTOS:\n${A.conclusao.join('\n')}\nDESAFIO DOS ADULTOS:\n${A.desafio.abertura.join('\n')}
