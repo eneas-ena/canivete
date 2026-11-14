@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.5" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.6" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.8.5';
+const VERSAO = '0.8.6';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -555,9 +555,12 @@ async function gerarAdolescentes(){
     T = E.parcialT = { versao: 'adolescentes', titulo: A.titulo, ref: A.ref, versiculo: A.versiculo, big_idea: A.big_idea, pontos: [] };
   }
   const sis = PROMPT_RDA + REGRAS_SAIDA;
-  const nomes = ['Títulos e introdução', 'Ponto 1', 'Ponto 2', 'Ponto 3', 'Conclusão, desafio e oração final'];
+  const nomes = ['Títulos e introdução', 'Ponto 1 · explicação e ilustração', 'Ponto 1 · aplicação, frase e perguntas', 'Ponto 2 · explicação e ilustração', 'Ponto 2 · aplicação, frase e perguntas', 'Ponto 3 · explicação e ilustração', 'Ponto 3 · aplicação, frase e perguntas', 'Conclusão, desafio e oração final'];
   passos(nomes);
-  if (T.intro) passo(0, 'feito'); T.pontos.forEach((p, k) => { if (p) passo(k + 1, 'feito'); }); if (T.oracao) passo(4, 'feito');
+  T.pontos = (T.pontos || []).map(p => p && p.frase && !p.parte1 ? { ...p, parte1: p.paragrafos } : p);   // pontos de versões antigas
+  if (T.intro) passo(0, 'feito');
+  T.pontos.forEach((p, k) => { if (p && p.parte1) passo(1 + k * 2, 'feito'); if (p && p.frase) passo(2 + k * 2, 'feito'); });
+  if (T.oracao) passo(7, 'feito');
   travar(true); $('#msg').innerHTML = '<div class="aviso">Gerando a versão dos adolescentes… leva cerca de 1 minuto e meio.</div>';
   const base = `ESTUDO DOS ADULTOS (base da adaptação)\nTítulo: ${A.titulo}\nTexto: ${A.ref} — ${A.versiculo || ''}\nIdeia central: ${A.big_idea || ''}\nPontos: ${A.pontos.map((p, k) => `${k + 1}. ${p.titulo}`).join(' | ')}`;
   let i = 0;
@@ -575,12 +578,21 @@ Formato:
     passo(0, 'feito'); guardar();
     }
     const titulos = T.titulos || [];
-    const ponto = k => async () => {
+    // cada ponto em duas metades curtas (a IA estava cortando o fim quando era uma resposta só)
+    const metade1 = k => async () => {
       const pa = A.pontos[k];
-      const pi = await pedirTexto(sis, base + `\n\nPONTO ${k + 1} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}\nFrase de impacto: ${pa.frase}\nPerguntas: ${pa.perguntas}
+      const r = await pedirTexto(sis, base + `\n\nPONTO ${k + 1} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}
 
-Adapte SOMENTE este ponto para os adolescentes (400 a 500 palavras), com o título "${titulos[k] || pa.titulo}". Ilustrações novas do mundo deles. Frase de impacto nova, curta e memorável. Perguntas para o grupo de adolescentes.`, 2000, true);
-      T.pontos[k] = { titulo: String(titulos[k] || pa.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() };
+Adapte para os adolescentes a PRIMEIRA METADE do ponto ${k + 1}, "${titulos[k] || pa.titulo}": a explicação do texto bíblico, em linguagem deles, e uma ilustração nova do mundo deles (escola, celular, amizades, esportes…). Entre 250 e 300 palavras. Ainda NÃO escreva a aplicação, a frase de impacto nem as perguntas.`, 1400, false);
+      T.pontos[k] = { titulo: String(titulos[k] || pa.titulo).toUpperCase(), parte1: r.paragrafos };
+    };
+    const metade2 = k => async () => {
+      const pa = A.pontos[k], pt = T.pontos[k];
+      const r = await pedirTexto(sis, base + `\n\nPONTO ${k + 1} DOS ADOLESCENTES: "${pt.titulo}". A primeira metade (explicação e ilustração) já está escrita e termina assim: "${pt.parte1.slice(-2).join(' ')}"
+Aplicação do ponto no estudo dos adultos (só como referência): ${pa.paragrafos.slice(-3).join(' ')}
+
+Escreva a SEGUNDA METADE deste ponto para os adolescentes: a aplicação prática para a semana deles, entre 150 e 220 palavras. Depois, uma frase de impacto nova, curta e memorável, e uma ou duas perguntas para o grupo de adolescentes.`, 1200, true);
+      pt.paragrafos = [...pt.parte1, ...r.paragrafos]; pt.frase = r.frase; pt.perguntas = r.perguntas;
     };
     const final = async () => {
       const pf = await pedirJSON(sis, base + `\n\nCONCLUSÃO DOS ADULTOS:\n${A.conclusao.join('\n')}\nDESAFIO DOS ADULTOS:\n${A.desafio.abertura.join('\n')}
@@ -597,9 +609,12 @@ Formato:
       T.desafio = { titulo: 'DESAFIO FINAL E CHAMADO À AÇÃO', abertura: lista(dz.abertura), passos: (dz.passos || []).map(p => ({ rotulo: String(p.rotulo || '').replace(/:\s*$/, ''), texto: String(p.texto || '') })), fechamento: lista(dz.fechamento) };
       T.oracao = lista(pf.oracao);
     };
-    const rodada = [0, 1, 2].filter(k => !T.pontos[k]).map(k => ({ i: k + 1, fn: ponto(k) }));
-    if (!T.oracao) rodada.push({ i: 4, fn: final });
+    const rodada = [0, 1, 2].filter(k => !(T.pontos[k] && T.pontos[k].parte1)).map(k => ({ i: 1 + k * 2, fn: metade1(k) }));
+    if (!T.oracao) rodada.push({ i: 7, fn: final });
     await emParalelo(rodada, n => { i = n; });
+    const rodada2 = [0, 1, 2].filter(k => !T.pontos[k].frase).map(k => ({ i: 2 + k * 2, fn: metade2(k) }));
+    await emParalelo(rodada2, n => { i = n; });
+    T.pontos = T.pontos.map(p => ({ titulo: p.titulo, paragrafos: p.paragrafos, frase: p.frase, perguntas: p.perguntas }));
     delete T.titulos; E.adolescentes = T; delete E.parcialT; guardar();
     $('#msg').innerHTML = '<div class="aviso">Versão dos adolescentes pronta. Revise na aba “Adolescentes (RDA)”.</div>';
     trocarAba('adolescentes');
