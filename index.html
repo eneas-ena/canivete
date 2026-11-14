@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Canivete" data-versao="0.3.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.4.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -197,7 +197,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.3.0';
+const VERSAO = '0.4.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -212,6 +212,7 @@ const COMODOS = {
     ['Leitura da Bíblia', 'Trilhas de leitura', 'https://eneas-ena.github.io/leitura_biblia/']
   ],
   'Púlpito': [
+    ['Ateliê do Sermão', 'DOCX da IA → diagramado para pregar', 'atelie.html'],
     ['KTL', 'Escrever sermões e calendário', KTL_URL],
     ['Pregador', 'No púlpito (iPad)', 'https://eneas-ena.github.io/pregador-visual/'],
     ['Scriba', 'Transcrever pregações', 'https://eneas-ena.github.io/scriba/'],
@@ -361,7 +362,7 @@ function htmlDomingo(rows, erro){
         <span class="selo s-${esc(s.situacao)}">${esc(ROT_SIT[s.situacao] || s.situacao || '')}</span>
         ${s.texto ? `<a class="btn peq" href="${memoriaLink(s.texto)}">O que já fiz</a>` : ''}
       </span></div>`).join('')}
-    <div class="botoes"><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir no KTL</a></div>
+    <div class="botoes"><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir no KTL</a><a class="btn ouro" href="atelie.html">Ateliê do Sermão</a></div>
   </div>`;
 }
 /* "Romanos 8:1-11", "Romanos 8:18-30" → "Romanos 8" */
@@ -640,7 +641,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharPainel
 document.querySelectorAll('nav.comodos [data-comodo]').forEach(b => b.onclick = () => {
   const nome = b.dataset.comodo;
   abrirPainel(nome, 'Os apps deste cômodo', `<div class="lista-apps"><div class="apps">` +
-    COMODOS[nome].map(([n, d, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}<small>${esc(d)}</small></a>`).join('') + '</div></div>', false);
+    COMODOS[nome].map(([n, d, u]) => `<a href="${esc(u)}"${/^https?:/.test(u) ? ' target="_blank" rel="noopener"' : ''}>${esc(n)}<small>${esc(d)}</small></a>`).join('') + '</div></div>', false);
 });
 document.querySelector('nav.comodos [data-ir="memoria"]').onclick = () => { location.href = 'memoria.html'; };
 

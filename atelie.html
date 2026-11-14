@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ateliê do Sermão · Canivete</title>
+<meta name="theme-color" content="#0F1B33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.4.0"></script>
+<script src="mammoth.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{ --fundo:#0B1426; --cartao:#13213D; --cartao2:#182A4C; --texto:#F3EEDF; --mudo:#A8B3C7; --borda:#26385C; --ouro:#C9A227; --ouroTexto:#D9B64A; --perigo:#E58B7A; }
+[data-tema="claro"]{ --fundo:#F5F1E6; --cartao:#FFFFFF; --cartao2:#F8F4EA; --texto:#0F1B33; --mudo:#4E5A70; --borda:#E2D9C2; --ouro:#C9A227; --ouroTexto:#7D600B; --perigo:#A33A26; }
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fundo);color:var(--texto);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer}
+.app{max-width:1100px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 40px)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.marca small{font-family:Cinzel,serif;font-size:12px;letter-spacing:3px;color:var(--ouroTexto)}
+.marca small a{color:inherit;text-decoration:none}
+.marca h1{margin:0;font-family:'Cormorant Garamond',serif;font-size:34px;line-height:1.05}
+.marca p{margin:2px 0 0;color:var(--mudo);font-size:14px}
+.acoes{display:flex;align-items:center;gap:8px}
+.icone{width:44px;height:44px;border-radius:999px;border:1px solid var(--borda);background:var(--cartao);color:var(--ouroTexto);display:flex;align-items:center;justify-content:center}
+.versao{font-size:12px;color:var(--mudo);padding:0 4px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.btn.ouro{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
+.btn:disabled{opacity:.4}
+.entrada{margin-top:22px;border:2px dashed var(--borda);border-radius:18px;padding:28px;text-align:center;background:var(--cartao)}
+.entrada.arrastando{border-color:var(--ouro)}
+.entrada p{margin:8px 0 0;color:var(--mudo);font-size:14px}
+.barra{position:sticky;top:0;z-index:20;margin-top:18px;padding:10px;border-radius:14px;border:1px solid var(--borda);background:var(--cartao);display:none;flex-wrap:wrap;gap:8px;align-items:center}
+.barra.ativa{display:flex}
+.barra .sep{flex:1}
+.barra .dica{font-size:12px;color:var(--mudo)}
+.aviso{margin-top:12px;font-size:14px;color:var(--mudo)}
+.erro{margin-top:12px;font-size:14px;color:var(--perigo)}
+/* a folha: imita o DOCX final */
+.folha{display:none;margin:18px auto 0;max-width:820px;background:#fff;color:#000;border-radius:6px;box-shadow:0 6px 30px rgba(0,0,0,.35);padding:56px 60px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.45;text-align:justify}
+.folha.ativa{display:block}
+.folha:focus{outline:none}
+.folha .titulo{text-align:center;color:#AB7942;font-weight:700;font-size:24px;margin:0 0 28px}
+.folha .texto-base{margin:0 0 6px;font-size:16px}
+.folha .texto-base b.rot{color:#AB7942;text-decoration:underline;font-size:18px}
+.folha .secao{color:#AB7942;font-weight:700;font-size:18px;margin:22px 0 4px;text-align:left}
+.folha ul{margin:0;padding-left:22px}
+.folha li{margin:0 0 3px}
+.folha .rot-ilus{color:#AB7942;font-weight:700;font-size:13px;margin:10px 0 2px;text-align:left}
+.folha .frase{text-align:center;font-weight:700;margin:14px 0}
+.folha .frase span{background:#FFFF00}
+.folha .nota-cortado{display:none}
+@media (max-width:640px){ .folha{padding:28px 20px;font-size:15px} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="marca">
+      <small><a href="./">‹ CANIVETE · HOJE</a></small>
+      <h1>Ateliê do Sermão</h1>
+      <p>Do sermão gerado pela IA ao DOCX pronto para pregar</p>
+    </div>
+    <div class="acoes">
+      <span class="versao" id="versao"></span>
+      <button class="icone" id="bTema" type="button" aria-label="Alternar modo claro e escuro"></button>
+      <button class="icone" id="bAtualizar" type="button" aria-label="Atualizar app">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <label class="entrada" id="entrada" for="arquivo">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v6M9 15l3-3 3 3"/></svg>
+    <div style="font-size:17px;font-weight:600;margin-top:6px">Escolher o DOCX gerado pela IA</div>
+    <p>Toque aqui ou arraste o arquivo. A diagramação é feita na hora, neste aparelho.</p>
+    <input id="arquivo" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="position:absolute;left:-9999px">
+  </label>
+  <div id="msg"></div>
+
+  <div class="barra" id="barra" role="toolbar" aria-label="Revisão">
+    <button class="btn" type="button" id="bNegrito" title="Negrito na seleção"><b>N</b> Negrito</button>
+    <button class="btn" type="button" id="bItalico" title="Itálico na seleção"><i>I</i> Itálico</button>
+    <button class="btn" type="button" id="bTirar" title="Tirar o bullet onde está o cursor">Tirar bullet</button>
+    <span class="dica">Selecione uma frase e toque em Negrito. Pode corrigir o texto direto na folha.</span>
+    <span class="sep"></span>
+    <button class="btn" type="button" id="bOutro">Outro arquivo</button>
+    <button class="btn ouro" type="button" id="bBaixar">Baixar DOCX</button>
+  </div>
+
+  <article class="folha" id="folha" contenteditable="true" spellcheck="true" aria-label="Sermão diagramado"></article>
+</div>
+
+<script>
+/* =====================================================================
+   ATELIÊ DO SERMÃO — Canivete do Bispo
+   Receita de diagramação do Bispo (tirada de "A casa que foi batizada"):
+   · A4, margens 2 cm, Arial 12, justificado
+   · Título 18 pt negrito bronze centralizado; "TEXTO" sublinhado bronze; seções 14 pt bronze
+   · Parágrafos viram bullets de 1–2 frases (conclusão: um bullet por parágrafo)
+   · Frase de impacto: sozinha, centralizada, negrito, marca-texto amarelo
+   · Ilustração fica, com rótulo pequeno (o Bispo decide no púlpito se usa)
+   · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
+   · Itálico (palavras gregas) e negrito do original são mantidos
+   ===================================================================== */
+const VERSAO = '0.4.0';
+const BRONZE = 'AB7942';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const lerLS = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+/* ---------- padrões do app ---------- */
+$('#versao').textContent = 'v' + VERSAO;
+const SOL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const LUA = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+function aplicarTema(t){ document.documentElement.dataset.tema = t; $('#bTema').innerHTML = t === 'claro' ? LUA : SOL; gravarLS('canivete.tema', t); }
+aplicarTema(lerLS('canivete.tema', 'escuro'));
+$('#bTema').onclick = () => aplicarTema(document.documentElement.dataset.tema === 'claro' ? 'escuro' : 'claro');
+$('#bAtualizar').onclick = () => { if (window.porteiroAtualizar) window.porteiroAtualizar(); else location.reload(); };
+
+/* =====================================================================
+   1. LER O DOCX (mammoth) → parágrafos com negrito/itálico
+   ===================================================================== */
+const AUTORES = /\b(Agostinho|Calvino|Lutero|Spurgeon|Wesley|Bonhoeffer|Lewis|Tozer|Moody|Barth|Crisóstomo|Atanásio|Pascal|Kierkegaard|Stott|Lloyd-Jones|Piper|Keller|Edwards)\b/;
+const ROT_CONTEUDO = ['exegese e teologia', 'exegese', 'teologia', 'aplicação', 'contexto', 'explicação', 'desenvolvimento'];
+const FIM = /^(desafio final|apelo|resumindo)/i;
+
+/* Parágrafo → texto + marcas (negrito, itálico) de cada caractere */
+function segmentar(el){
+  let txt = ''; const fl = [];
+  (function andar(no, b, i){
+    no.childNodes.forEach(n => {
+      if (n.nodeType === 3){ const t = n.nodeValue; txt += t; for (let k = 0; k < t.length; k++) fl.push([b, i]); return; }
+      if (n.nodeType !== 1) return;
+      const tag = n.tagName.toLowerCase();
+      if (tag === 'br'){ txt += ' '; fl.push([b, i]); return; }
+      andar(n, b || tag === 'strong' || tag === 'b', i || tag === 'em' || tag === 'i');
+    });
+  })(el, false, false);
+  return { txt, fl };
+}
+/* Início/fim de cada frase */
+function frases(txt){
+  const cortes = [0], re = /(?<=[.!?…])["”’]?\s+(?=["“—(]?[A-ZÁÉÍÓÚÂÊÔÃÕÀÇ])/g; let m;
+  while ((m = re.exec(txt))) cortes.push(m.index + m[0].length);
+  return cortes.map((a, k) => [a, k + 1 < cortes.length ? cortes[k + 1] : txt.length]);
+}
+/* Junta frases curtas: bullets de 1–2 frases, até ~40 palavras */
+function agrupar(fs, txt){
+  const g = []; let at = null;
+  for (const [a, b] of fs){
+    const n = txt.slice(a, b).trim().split(/\s+/).length;
+    if (at && at.n < 12 && at.n + n <= 40 && at.q < 3){ at.b = b; at.n += n; at.q++; }
+    else { if (at) g.push(at); at = { a, b, n, q: 1 }; }
+  }
+  if (at) g.push(at);
+  return g.map(x => [x.a, x.b]);
+}
+/* Trecho [a,b) em HTML com <b>/<i>; extra = trechos para pôr em negrito */
+function htmlTrecho(s, a, b, extra){
+  while (a < b && /\s/.test(s.txt[a])) a++;
+  while (b > a && /\s/.test(s.txt[b - 1])) b--;
+  let out = '', k = a;
+  const marca = i => { let [bo, it] = s.fl[i] || [false, false]; if (extra && extra.some(([x, y]) => i >= x && i < y)) bo = true; return [bo, it]; };
+  while (k < b){
+    const [bo, it] = marca(k); let j = k;
+    while (j < b){ const m = marca(j); if (m[0] !== bo || m[1] !== it) break; j++; }
+    let t = esc(s.txt.slice(k, j));
+    if (it) t = '<i>' + t + '</i>';
+    if (bo) t = '<b>' + t + '</b>';
+    out += t; k = j;
+  }
+  return out;
+}
+
+function diagramar(html){
+  const d = new DOMParser().parseFromString('<div id="r">' + html + '</div>', 'text/html');
+  const ps = [...d.getElementById('r').children].filter(p => p.textContent.trim());
+  if (!ps.length) throw new Error('O arquivo parece vazio.');
+  let out = '', modo = 'corpo', secao = '', ref = '', lista = false;
+  const fecharLista = () => { if (lista){ out += '</ul>'; lista = false; } };
+  const bullet = h => { if (!lista){ out += '<ul>'; lista = true; } out += '<li>' + h + '</li>'; };
+  const titulo = ps[0].textContent.trim();
+  out += `<h1 class="titulo">${esc(titulo.toUpperCase())}</h1>`;
+  for (const p of ps.slice(1)){
+    const t = p.textContent.trim(), tl = t.toLowerCase().replace(/:$/, '');
+    if (FIM.test(t)) break;                                                    // Desafio Final, Apelo, Resumindo: fora
+    const mt = t.match(/^texto\s*:\s*(.+?)(?:\s+big idea\s*:.*)?$/i);
+    if (mt){ fecharLista(); ref = mt[1].trim().replace(/(\d+)\.(\d+)/, '$1:$2'); out += `<p class="texto-base"><b class="rot">TEXTO</b>: ${esc(ref)}</p>`; continue; }
+    if (tl.startsWith('big idea')) continue;
+    if (tl === 'introdução' || tl === 'conclusão' || /^\d+\.\s/.test(t)){
+      fecharLista(); out += `<h2 class="secao">${esc(/^\d/.test(t) ? t : t.toUpperCase())}</h2>`; secao = tl; modo = 'corpo'; continue;
+    }
+    if (ROT_CONTEUDO.includes(tl) || tl === 'frase de impacto' || tl === 'transição' || tl === 'ilustração'){
+      fecharLista();
+      modo = tl === 'aplicação' ? 'aplicacao' : tl === 'frase de impacto' ? 'frase' : tl === 'transição' ? 'descarte' : tl === 'ilustração' ? 'ilustracao' : 'corpo';
+      if (modo === 'ilustracao') out += '<p class="rot-ilus">Ilustração</p>';
+      continue;
+    }
+    if (modo === 'descarte') continue;
+    if (modo === 'frase'){ fecharLista(); out += `<p class="frase"><span>${esc(t)}</span></p>`; continue; }
+    const s = segmentar(p);
+    if (secao === 'conclusão'){ bullet(htmlTrecho(s, 0, s.txt.length)); continue; }
+    const fs = frases(s.txt);
+    const extra = fs.filter(([a, b]) => { const f = s.txt.slice(a, b); return AUTORES.test(f) || (modo === 'aplicacao' && /\?\s*$/.test(f) && /\bvocê\b/i.test(f)); });
+    for (const [a, b] of agrupar(fs, s.txt)) bullet(htmlTrecho(s, a, b, extra));
+  }
+  fecharLista();
+  return { html: out, titulo, ref };
+}
+
+/* =====================================================================
+   2. TELA: abrir arquivo, revisar
+   ===================================================================== */
+let atual = lerLS('atelie.rascunho', null);   // { titulo, ref, html, nome }
+function mostrar(){
+  const tem = !!(atual && atual.html);
+  $('#folha').innerHTML = tem ? atual.html : '';
+  $('#folha').classList.toggle('ativa', tem);
+  $('#barra').classList.toggle('ativa', tem);
+  $('#entrada').style.display = tem ? 'none' : '';
+}
+async function abrirArquivo(f){
+  $('#msg').innerHTML = '<div class="aviso">Diagramando…</div>';
+  try {
+    if (!/\.docx$/i.test(f.name)) throw new Error('Escolha um arquivo .docx.');
+    const r = await mammoth.convertToHtml({ arrayBuffer: await f.arrayBuffer() });
+    const d = diagramar(r.value);
+    atual = { ...d, nome: f.name };
+    gravarLS('atelie.rascunho', atual);
+    $('#msg').innerHTML = `<div class="aviso">Pronto: “${esc(d.titulo)}”${d.ref ? ' · ' + esc(d.ref) : ''}. Revise na folha e baixe o DOCX.</div>`;
+    mostrar();
+  } catch (e){ $('#msg').innerHTML = `<div class="erro">Não consegui diagramar: ${esc(e.message || e)}</div>`; }
+}
+$('#arquivo').addEventListener('change', e => { const f = e.target.files[0]; if (f) abrirArquivo(f); e.target.value = ''; });
+const ent = $('#entrada');
+['dragenter', 'dragover'].forEach(ev => ent.addEventListener(ev, e => { e.preventDefault(); ent.classList.add('arrastando'); }));
+['dragleave', 'drop'].forEach(ev => ent.addEventListener(ev, e => { e.preventDefault(); ent.classList.remove('arrastando'); }));
+ent.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) abrirArquivo(f); });
+
+// guarda as correções feitas na folha (se o iPad recarregar, nada se perde)
+let tSalvar = null;
+$('#folha').addEventListener('input', () => { clearTimeout(tSalvar); tSalvar = setTimeout(() => { if (atual){ atual.html = $('#folha').innerHTML; gravarLS('atelie.rascunho', atual); } }, 600); });
+
+// barra de revisão (mousedown evita perder a seleção no iPad)
+const cmd = c => e => { e.preventDefault(); document.execCommand(c, false, null); $('#folha').dispatchEvent(new Event('input')); };
+$('#bNegrito').addEventListener('mousedown', cmd('bold'));
+$('#bItalico').addEventListener('mousedown', cmd('italic'));
+$('#bNegrito').addEventListener('touchend', cmd('bold'));
+$('#bItalico').addEventListener('touchend', cmd('italic'));
+function tirarBullet(e){
+  e.preventDefault();
+  const sel = getSelection(); if (!sel.rangeCount) return;
+  let n = sel.anchorNode; while (n && n.nodeName !== 'LI' && n !== $('#folha')) n = n.parentNode;
+  if (n && n.nodeName === 'LI'){ const ul = n.parentNode; n.remove(); if (ul && !ul.children.length) ul.remove(); $('#folha').dispatchEvent(new Event('input')); }
+}
+$('#bTirar').addEventListener('mousedown', tirarBullet);
+$('#bTirar').addEventListener('touchend', tirarBullet);
+$('#bOutro').onclick = () => { if (confirmarTroca()){ atual = null; gravarLS('atelie.rascunho', null); $('#msg').innerHTML = ''; mostrar(); } };
+function confirmarTroca(){ return !atual || window.confirm('Começar com outro arquivo? A revisão deste sermão será descartada (baixe o DOCX antes, se quiser).'); }
+
+/* =====================================================================
+   3. GERAR O DOCX a partir da folha revisada
+   ===================================================================== */
+let _docx = null;
+function carregarDocx(){
+  if (window.docx) return Promise.resolve(window.docx);
+  if (!_docx) _docx = new Promise((ok, erro) => {
+    const sc = document.createElement('script'); sc.src = 'docx.min.js';
+    sc.onload = () => window.docx ? ok(window.docx) : erro(new Error('biblioteca docx'));
+    sc.onerror = () => { _docx = null; erro(new Error('não carregou a biblioteca docx')); };
+    document.head.appendChild(sc);
+  });
+  return _docx;
+}
+function negrito(n){ return /^(B|STRONG)$/.test(n.nodeName) || (n.style && (n.style.fontWeight === 'bold' || +n.style.fontWeight >= 600)); }
+function italico(n){ return /^(I|EM)$/.test(n.nodeName) || (n.style && n.style.fontStyle === 'italic'); }
+function runs(D, el, base){
+  const out = [];
+  (function andar(no, est){
+    no.childNodes.forEach(n => {
+      if (n.nodeType === 3){ const t = n.nodeValue.replace(/\s+/g, ' '); if (t) out.push(new D.TextRun({ text: t, ...est })); return; }
+      if (n.nodeType !== 1) return;
+      if (n.nodeName === 'BR'){ out.push(new D.TextRun({ break: 1 })); return; }
+      const e = { ...est };
+      if (negrito(n)) e.bold = true;
+      if (italico(n)) e.italics = true;
+      if (n.nodeName === 'SPAN' && n.style && n.style.fontWeight === 'normal') e.bold = false;
+      andar(n, e);
+    });
+  })(el, base || {});
+  return out;
+}
+async function baixar(){
+  const btn = $('#bBaixar'); btn.disabled = true; btn.textContent = 'Gerando…';
+  try {
+    const D = await carregarDocx();
+    const { Document, Paragraph, TextRun, AlignmentType, Packer, LevelFormat, HighlightColor, UnderlineType } = D;
+    const filhos = [], vazio = () => new Paragraph({ children: [] });
+    const folha = $('#folha');
+    [...folha.children].forEach(el => {
+      const c = el.classList;
+      if (c.contains('titulo')){
+        filhos.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: el.textContent.trim(), bold: true, size: 36, color: BRONZE })] }), vazio(), vazio());
+      } else if (c.contains('texto-base')){
+        const resto = el.textContent.replace(/^\s*TEXTO\s*/i, '');
+        filhos.push(new Paragraph({ alignment: AlignmentType.LEFT, children: [
+          new TextRun({ text: 'TEXTO', bold: true, size: 28, color: BRONZE, underline: { type: UnderlineType.SINGLE } }), new TextRun({ text: resto })] }));
+      } else if (c.contains('secao')){
+        filhos.push(vazio(), new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: el.textContent.trim(), bold: true, size: 28, color: BRONZE })] }));
+      } else if (c.contains('rot-ilus')){
+        filhos.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 120 }, children: [new TextRun({ text: 'Ilustração', bold: true, size: 20, color: BRONZE })] }));
+      } else if (c.contains('frase')){
+        filhos.push(vazio(), new Paragraph({ alignment: AlignmentType.CENTER, children: runs(D, el, { bold: true, highlight: 'yellow' }) }), vazio());
+      } else if (el.nodeName === 'UL'){
+        el.querySelectorAll(':scope > li').forEach(li => {
+          if (!li.textContent.trim()) return;
+          filhos.push(new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { after: 40 }, children: runs(D, li) }));
+        });
+        if (el.nextElementSibling && el.nextElementSibling.classList.contains('rot-ilus')) {} // o rótulo já dá o respiro
+      } else if (el.textContent.trim()){
+        filhos.push(new Paragraph({ children: runs(D, el) }));
+      }
+    });
+    const doc = new Document({
+      creator: 'Canivete · Ateliê do Sermão',
+      title: atual ? atual.titulo : 'Sermão',
+      styles: { default: { document: { run: { font: 'Arial', size: 24 }, paragraph: { alignment: AlignmentType.JUSTIFIED } } } },
+      numbering: { config: [{ reference: 'bullets', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT,
+        style: { paragraph: { indent: { left: 360, hanging: 360 } } } }] }] },
+      sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } }, children: filhos }]
+    });
+    const blob = await Packer.toBlob(doc);
+    const nome = `${(atual && atual.titulo ? atual.titulo.toUpperCase() : 'SERMÃO')}${atual && atual.ref ? ' - ' + atual.ref.replace(/:/g, '.') : ''}.docx`.replace(/[\\/?%*|"<>]/g, '');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    $('#msg').innerHTML = `<div class="aviso">DOCX gerado: ${esc(nome)}</div>`;
+  } catch (e){ $('#msg').innerHTML = `<div class="erro">Não consegui gerar o DOCX: ${esc(e.message || e)}</div>`; }
+  btn.disabled = false; btn.textContent = 'Baixar DOCX';
+}
+$('#bBaixar').onclick = baixar;
+
+mostrar();
+if (atual) $('#msg').innerHTML = `<div class="aviso">Continuando a revisão de “${esc(atual.titulo)}”.</div>`;
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
+</script>
+</body>
+</html>
