@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.8.1';
+const VERSAO = '0.8.2';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -340,12 +340,22 @@ async function pedirJSON(sistema, pedido, maxTokens){
   let ultimoErro;
   for (let tentativa = 0; tentativa < 2; tentativa++){
     try {
-      const r = await fetch(IA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: IA_MODELO, max_tokens: maxTokens, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n---\n\n' + pedido }] }) });
-      const j = await r.json();
-      if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('HTTP ' + r.status));
-      const txt = (j.content || []).map(c => c.text || '').join('');
-      return JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
+      let txt = '';
+      for (let volta = 0; volta < 5; volta++){
+        const msgs = [{ role: 'user', content: sistema + '\n\n---\n\n' + pedido }];
+        if (txt) msgs.push({ role: 'assistant', content: txt }, { role: 'user', content: 'A resposta foi cortada. Continue EXATAMENTE de onde parou (no meio da palavra ou da frase, se for o caso), sem repetir nada e sem nenhum comentário.' });
+        const r = await fetch(IA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: IA_MODELO, max_tokens: maxTokens, system: sistema, messages: msgs }) });
+        const bruto = await r.text();
+        let j; try { j = JSON.parse(bruto); } catch { throw new Error(r.ok ? 'o servidor da IA devolveu uma resposta vazia' : 'o servidor da IA respondeu com erro ' + r.status); }
+        if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('erro ' + r.status));
+        txt += (j.content || []).map(c => c.text || '').join('');
+        const cortada = j.stop_reason === 'max_tokens' || (!j.stop_reason && !/\}\s*(```)?\s*$/.test(txt));
+        if (!cortada) break;
+      }
+      const ini = txt.indexOf('{'), fim = txt.lastIndexOf('}');
+      if (ini < 0 || fim < ini) throw new Error('a resposta da IA veio incompleta');
+      return JSON.parse(txt.slice(ini, fim + 1));
     } catch (e){ ultimoErro = e; }
   }
   throw ultimoErro;
@@ -371,53 +381,82 @@ ${d ? `\nDEVOCIONAL QUE INSPIROU O ESTUDO (use como ponto de partida, sem copiar
 async function gerarAdultos(){
   lerCampos();
   if (!E.campos.ref && !E.campos.tema){ $('#msg').innerHTML = '<div class="erro">Escolha um devocional ou preencha o tema e o texto.</div>'; return; }
-  if (E.adultos && !confirm('Gerar de novo o estudo dos adultos? O texto atual (com suas correções) será substituído.')) return;
+  let est = E.parcialA;   // geração interrompida: continua de onde parou
+  if (!est){
+    if (E.adultos && !confirm('Gerar de novo o estudo dos adultos? O texto atual (com suas correções) será substituído.')) return;
+    est = E.parcialA = { versao: 'adultos', pontos: [] };
+  }
   const sis = PROMPT_BISPO + REGRAS_SAIDA;
-  passos(['Plano do estudo e introdução', 'Ponto 1', 'Ponto 2', 'Ponto 3', 'Conclusão, desafio e oração final', 'Texto bíblico (NAA)']);
-  travar(true); $('#msg').innerHTML = '<div class="aviso">Gerando… leva uns 3 minutos. Pode deixar esta tela aberta.</div>';
-  const est = { versao: 'adultos' };
+  const nomes = ['Plano do estudo e introdução', 'Ponto 1 · explicação do texto', 'Ponto 1 · ilustração e aplicação', 'Ponto 2 · explicação do texto', 'Ponto 2 · ilustração e aplicação', 'Ponto 3 · explicação do texto', 'Ponto 3 · ilustração e aplicação', 'Conclusão, desafio e oração final', 'Texto bíblico (NAA)'];
+  passos(nomes);
+  if (est.intro) passo(0, 'feito');
+  est.pontos.forEach((p, k) => { if (p && p.parte1) passo(1 + k * 2, 'feito'); if (p && p.frase != null) passo(2 + k * 2, 'feito'); });
+  if (est.oracao) passo(7, 'feito');
+  travar(true);
+  $('#msg').innerHTML = `<div class="aviso">${est.intro ? 'Continuando de onde parou…' : 'Gerando… leva uns 4 minutos. Pode deixar esta tela aberta.'}</div>`;
   let i = 0;
+  const resumoPlano = () => `Título: ${est.titulo}\nIdeia central: ${est.big_idea}\nTexto: ${E.campos.ref}\nPontos:\n${est.plano.map((p, k) => `${k + 1}. ${p.titulo} — ${p.foco}`).join('\n')}`;
   try {
-    passo(0, 'indo');
-    const p0 = await pedirJSON(sis, dadosDoEstudo() + `
+    if (!est.intro){
+      i = 0; passo(0, 'indo');
+      const p0 = await pedirJSON(sis, dadosDoEstudo() + `
 
 Primeiro, planeje o estudo e escreva a INTRODUÇÃO. Formato:
 {"titulo": "título do estudo em MAIÚSCULAS, de 2 a 6 palavras",
  "big_idea": "a ideia central em uma frase",
  "pontos": [{"titulo": "TÍTULO FORTE DO PONTO – SUBTÍTULO", "foco": "que parte do texto o ponto explica e qual é a ênfase"}, {…}, {…}],
- "introducao": ["parágrafo", "…"]}`, 1600);
-    est.titulo = String(p0.titulo || E.campos.tema || '').toUpperCase(); est.big_idea = p0.big_idea || '';
-    est.intro = lista(p0.introducao);
-    const plano = (p0.pontos || []).slice(0, 3);
-    passo(0, 'feito');
-    est.pontos = [];
-    const resumoPlano = `Título: ${est.titulo}\nIdeia central: ${est.big_idea}\nTexto: ${E.campos.ref}\nPontos:\n${plano.map((p, k) => `${k + 1}. ${p.titulo} — ${p.foco}`).join('\n')}`;
-    for (i = 1; i <= 3; i++){
-      passo(i, 'indo');
-      const pl = plano[i - 1] || { titulo: 'Ponto ' + i, foco: '' };
-      const anterior = est.pontos[i - 2] ? est.pontos[i - 2].paragrafos.slice(-2).join(' ') : est.intro.slice(-1).join(' ');
-      const pi = await pedirJSON(sis, dadosDoEstudo() + `
-
-PLANO JÁ DEFINIDO:
-${resumoPlano}
-
-Final do trecho anterior (para dar continuidade): "${anterior}"
-
-Agora escreva SOMENTE o PONTO ${i}: "${pl.titulo}" (${pl.foco}).
-Entre 800 e 1000 palavras: exegese do texto, ilustração, aplicação direta e confrontadora${i < 3 ? ', terminando com uma transição natural para o ponto ' + (i + 1) : ''}.
-Formato:
-{"titulo": "${pl.titulo}",
- "paragrafos": ["parágrafo", "…"],
- "frase": "a frase de impacto do ponto, sem aspas",
- "perguntas": "uma ou duas perguntas para discussão em grupo, num só parágrafo"}`, 3500);
-      est.pontos.push({ titulo: String(pi.titulo || pl.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() });
-      passo(i, 'feito');
+ "introducao": ["parágrafo", "…"]}`, 1800);
+      est.titulo = String(p0.titulo || E.campos.tema || '').toUpperCase(); est.big_idea = p0.big_idea || '';
+      est.plano = (p0.pontos || []).slice(0, 3).map(p => ({ titulo: String(p.titulo || ''), foco: String(p.foco || '') }));
+      while (est.plano.length < 3) est.plano.push({ titulo: 'PONTO ' + (est.plano.length + 1), foco: '' });
+      est.intro = lista(p0.introducao);
+      passo(0, 'feito'); guardar();
     }
-    i = 4; passo(4, 'indo');
-    const pf = await pedirJSON(sis, dadosDoEstudo() + `
+    for (let k = 0; k < 3; k++){
+      const pl = est.plano[k];
+      const pt = est.pontos[k] || (est.pontos[k] = { titulo: pl.titulo.toUpperCase() });
+      const antes = k ? (est.pontos[k - 1].paragrafos || []).slice(-2).join(' ') : est.intro.slice(-1).join(' ');
+      if (!pt.parte1){
+        i = 1 + k * 2; passo(i, 'indo');
+        const a = await pedirJSON(sis, dadosDoEstudo() + `
 
 PLANO JÁ DEFINIDO:
-${resumoPlano}
+${resumoPlano()}
+
+Final do trecho anterior (para dar continuidade): "${antes}"
+
+Escreva a PRIMEIRA METADE do PONTO ${k + 1}: "${pl.titulo}" (${pl.foco}).
+Esta metade é a EXEGESE: explicação do texto a que o ponto se refere (contexto, palavras importantes, sentido), entre 400 e 500 palavras. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.
+Formato:
+{"paragrafos": ["parágrafo", "…"]}`, 2000);
+        pt.parte1 = lista(a.paragrafos);
+        passo(i, 'feito'); guardar();
+      }
+      if (pt.frase == null){
+        i = 2 + k * 2; passo(i, 'indo');
+        const b = await pedirJSON(sis, dadosDoEstudo() + `
+
+PLANO JÁ DEFINIDO:
+${resumoPlano()}
+
+PONTO ${k + 1}: "${pl.titulo}". A primeira metade (exegese) já está escrita e termina assim: "${pt.parte1.slice(-2).join(' ')}"
+
+Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (analogia, história ou imagem mental clara) e aplicação direta, prática e confrontadora, entre 400 e 500 palavras${k < 2 ? ', terminando com uma transição natural para o ponto ' + (k + 2) + ' ("' + est.plano[k + 1].titulo + '")' : ''}. Depois, a frase de impacto e as perguntas para discussão em grupo.
+Formato:
+{"paragrafos": ["parágrafo", "…"],
+ "frase": "a frase de impacto do ponto, sem aspas",
+ "perguntas": "uma ou duas perguntas para discussão em grupo, num só parágrafo"}`, 2000);
+        pt.paragrafos = [...pt.parte1, ...lista(b.paragrafos)];
+        pt.frase = limparAspas(b.frase); pt.perguntas = String(b.perguntas || '').trim();
+        passo(i, 'feito'); guardar();
+      }
+    }
+    if (!est.oracao){
+      i = 7; passo(7, 'indo');
+      const pf = await pedirJSON(sis, dadosDoEstudo() + `
+
+PLANO JÁ DEFINIDO:
+${resumoPlano()}
 Frases de impacto dos pontos: ${est.pontos.map(p => p.frase).join(' | ')}
 
 Agora escreva a CONCLUSÃO (cerca de 150 palavras, sem ideias novas), o DESAFIO FINAL (chamado claro, direto e prático, 2 a 4 parágrafos curtos) e uma ORAÇÃO FINAL (um parágrafo, terminando com "Amém.").
@@ -425,19 +464,22 @@ Formato:
 {"conclusao": ["parágrafo", "…"],
  "desafio": ["parágrafo", "…"],
  "oracao": ["parágrafo"]}`, 1800);
-    est.conclusao = lista(pf.conclusao); est.conclusao_frase = '';
-    est.desafio = { titulo: 'DESAFIO FINAL', abertura: lista(pf.desafio), passos: [], fechamento: [] };
-    est.oracao = lista(pf.oracao);
-    passo(4, 'feito');
-    i = 5; passo(5, 'indo');
+      est.conclusao = lista(pf.conclusao); est.conclusao_frase = '';
+      est.desafio = { titulo: 'DESAFIO FINAL', abertura: lista(pf.desafio), passos: [], fechamento: [] };
+      est.oracao = lista(pf.oracao);
+      passo(7, 'feito'); guardar();
+    }
+    i = 8; passo(8, 'indo');
     est.ref = E.campos.ref; est.versiculo = await versiculoNAA(E.campos.ref) || (E.dev && E.campos.ref === E.dev.referencia ? (E.dev.texto_biblico || '') : '');
-    passo(5, est.versiculo ? 'feito' : 'falhou');
-    E.adultos = est; guardar();
+    passo(8, est.versiculo ? 'feito' : 'falhou');
+    est.pontos = est.pontos.map(p => ({ titulo: p.titulo, paragrafos: p.paragrafos, frase: p.frase, perguntas: p.perguntas }));
+    delete est.plano;
+    E.adultos = est; delete E.parcialA; guardar();
     $('#msg').innerHTML = `<div class="aviso">Estudo dos adultos pronto${est.versiculo ? '' : ' (não achei o texto bíblico na NAA deste aparelho: toque abaixo do texto bíblico na folha e escreva o versículo)'}. Revise na folha. Depois gere a versão dos adolescentes.</div>`;
     trocarAba('adultos');
   } catch (e){
     passo(i, 'falhou');
-    $('#msg').innerHTML = `<div class="erro">A IA não respondeu nesta parte (${esc(e.message || e)}). Toque em “Gerar estudo dos adultos” para tentar de novo.</div>`;
+    $('#msg').innerHTML = `<div class="erro">Parou em “${esc(nomes[i])}”: ${esc(e.message || e)}. O que já ficou pronto está guardado: toque em “Continuar a geração” para seguir daqui.</div>`;
   }
   travar(false);
 }
@@ -445,14 +487,20 @@ Formato:
 async function gerarAdolescentes(){
   salvarFolha();
   const A = E.adultos; if (!A) return;
-  if (E.adolescentes && !confirm('Gerar de novo a versão dos adolescentes? O texto atual (com suas correções) será substituído.')) return;
+  let T = E.parcialT;
+  if (!T){
+    if (E.adolescentes && !confirm('Gerar de novo a versão dos adolescentes? O texto atual (com suas correções) será substituído.')) return;
+    T = E.parcialT = { versao: 'adolescentes', titulo: A.titulo, ref: A.ref, versiculo: A.versiculo, big_idea: A.big_idea, pontos: [] };
+  }
   const sis = PROMPT_RDA + REGRAS_SAIDA;
-  passos(['Títulos e introdução', 'Ponto 1', 'Ponto 2', 'Ponto 3', 'Conclusão, desafio e oração final']);
+  const nomes = ['Títulos e introdução', 'Ponto 1', 'Ponto 2', 'Ponto 3', 'Conclusão, desafio e oração final'];
+  passos(nomes);
+  if (T.intro) passo(0, 'feito'); T.pontos.forEach((p, k) => { if (p) passo(k + 1, 'feito'); });
   travar(true); $('#msg').innerHTML = '<div class="aviso">Gerando a versão dos adolescentes… leva uns 2 minutos.</div>';
-  const T = { versao: 'adolescentes', titulo: A.titulo, ref: A.ref, versiculo: A.versiculo, big_idea: A.big_idea };
   const base = `ESTUDO DOS ADULTOS (base da adaptação)\nTítulo: ${A.titulo}\nTexto: ${A.ref} — ${A.versiculo || ''}\nIdeia central: ${A.big_idea || ''}\nPontos: ${A.pontos.map((p, k) => `${k + 1}. ${p.titulo}`).join(' | ')}`;
   let i = 0;
   try {
+    if (!T.intro){
     passo(0, 'indo');
     const p0 = await pedirJSON(sis, base + `\n\nINTRODUÇÃO DOS ADULTOS:\n${A.intro.join('\n')}
 
@@ -460,11 +508,13 @@ Adapte para os adolescentes: os títulos dos 3 pontos (mais diretos, de preferê
 Formato:
 {"pontos": ["TÍTULO 1 – SUBTÍTULO", "TÍTULO 2 – SUBTÍTULO", "TÍTULO 3 – SUBTÍTULO"],
  "introducao": ["parágrafo", "…"]}`, 1400);
+    T.titulos = (p0.pontos || []).map(t => String(t).toUpperCase());
     T.intro = lista(p0.introducao);
-    const titulos = (p0.pontos || []).map(t => String(t).toUpperCase());
-    passo(0, 'feito');
-    T.pontos = [];
+    passo(0, 'feito'); guardar();
+    }
+    const titulos = T.titulos || [];
     for (i = 1; i <= 3; i++){
+      if (T.pontos[i - 1]) continue;
       passo(i, 'indo');
       const pa = A.pontos[i - 1];
       const pi = await pedirJSON(sis, base + `\n\nPONTO ${i} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}\nFrase de impacto: ${pa.frase}\nPerguntas: ${pa.perguntas}
@@ -475,8 +525,8 @@ Formato:
  "paragrafos": ["parágrafo", "…"],
  "frase": "frase de impacto, sem aspas",
  "perguntas": "uma ou duas perguntas, num só parágrafo"}`, 2600);
-      T.pontos.push({ titulo: String(pi.titulo || titulos[i - 1] || pa.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() });
-      passo(i, 'feito');
+      T.pontos[i - 1] = { titulo: String(pi.titulo || titulos[i - 1] || pa.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() };
+      passo(i, 'feito'); guardar();
     }
     i = 4; passo(4, 'indo');
     const pf = await pedirJSON(sis, base + `\n\nCONCLUSÃO DOS ADULTOS:\n${A.conclusao.join('\n')}\nDESAFIO DOS ADULTOS:\n${A.desafio.abertura.join('\n')}
@@ -493,17 +543,21 @@ Formato:
     T.desafio = { titulo: 'DESAFIO FINAL E CHAMADO À AÇÃO', abertura: lista(dz.abertura), passos: (dz.passos || []).map(p => ({ rotulo: String(p.rotulo || '').replace(/:\s*$/, ''), texto: String(p.texto || '') })), fechamento: lista(dz.fechamento) };
     T.oracao = lista(pf.oracao);
     passo(4, 'feito');
-    E.adolescentes = T; guardar();
+    delete T.titulos; E.adolescentes = T; delete E.parcialT; guardar();
     $('#msg').innerHTML = '<div class="aviso">Versão dos adolescentes pronta. Revise na aba “Adolescentes (RDA)”.</div>';
     trocarAba('adolescentes');
   } catch (e){
     passo(i, 'falhou');
-    $('#msg').innerHTML = `<div class="erro">A IA não respondeu nesta parte (${esc(e.message || e)}). Toque em “Gerar versão dos adolescentes” para tentar de novo.</div>`;
+    $('#msg').innerHTML = `<div class="erro">Parou em “${esc(nomes[i] || '')}”: ${esc(e.message || e)}. O que já ficou pronto está guardado: toque em “Continuar a versão dos adolescentes”.</div>`;
   }
   travar(false);
 }
 const limparAspas = t => String(t || '').trim().replace(/^["“”']+|["“”']+$/g, '').trim();
-function travar(sim){ $('#bGerarA').disabled = sim; $('#bGerarT').disabled = sim || !E.adultos; }
+function travar(sim){
+  $('#bGerarA').disabled = sim; $('#bGerarT').disabled = sim || !E.adultos;
+  $('#bGerarA').textContent = E.parcialA ? 'Continuar a geração' : 'Gerar estudo dos adultos';
+  $('#bGerarT').textContent = E.parcialT ? 'Continuar a versão dos adolescentes' : 'Gerar versão dos adolescentes';
+}
 $('#bGerarA').onclick = gerarAdultos;
 $('#bGerarT').onclick = gerarAdolescentes;
 
