@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.7.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.7.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,6 +47,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .ktl-op small{color:var(--mudo)}
 .ktl-op .sit{font-size:11px;padding:1px 7px;border-radius:9px;border:1px solid var(--borda);margin-left:6px;color:var(--mudo)}
 .barra .sep{flex:1}
+.data-preg{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mudo)}
+.data-preg input{font:inherit;color:var(--texto);background:var(--cartao2);border:1px solid var(--borda);border-radius:9px;padding:6px 8px;color-scheme:dark}
+[data-tema="claro"] .data-preg input{color-scheme:light}
 .barra .dica{font-size:12px;color:var(--mudo)}
 .aviso{margin-top:12px;font-size:14px;color:var(--mudo)}
 .erro{margin-top:12px;font-size:14px;color:var(--perigo)}
@@ -140,6 +143,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <button class="btn" type="button" id="bTirar" title="Tirar o bullet onde está o cursor">Tirar bullet</button>
     <span class="dica">Selecione uma frase e toque em Negrito. Pode corrigir o texto direto na folha.</span>
     <span class="sep"></span>
+    <label class="data-preg" title="Data em que este sermão será pregado">Pregação <input type="date" id="dataPreg"></label>
     <span class="salvo" id="salvo" aria-live="polite"></span>
     <button class="btn" type="button" id="bOutro">Outro arquivo</button>
     <button class="btn" type="button" id="bSlides">Gerar slides</button>
@@ -193,7 +197,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.7.0';
+const VERSAO = '0.7.1';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -312,6 +316,7 @@ function mostrar(){
   $('#folha').classList.toggle('ativa', tem);
   $('#barra').classList.toggle('ativa', tem);
   $('#entrada').style.display = tem ? 'none' : '';
+  if (tem){ if (!atual.data) atual.data = proximoDomingoISO(); $('#dataPreg').value = atual.data; }
 }
 async function abrirArquivo(f){
   $('#msg').innerHTML = '<div class="aviso">Diagramando…</div>';
@@ -319,7 +324,7 @@ async function abrirArquivo(f){
     if (!/\.docx$/i.test(f.name)) throw new Error('Escolha um arquivo .docx.');
     const r = await mammoth.convertToHtml({ arrayBuffer: await f.arrayBuffer() });
     const d = diagramar(r.value);
-    atual = { ...d, nome: f.name };
+    atual = { ...d, nome: f.name, data: proximoDomingoISO() };
     gravarLS('atelie.rascunho', atual);
     $('#msg').innerHTML = `<div class="aviso">Pronto: “${esc(d.titulo)}”${d.ref ? ' · ' + esc(d.ref) : ''}. Revise na folha e baixe o DOCX.</div>`;
     mostrar();
@@ -782,7 +787,7 @@ async function enviarAoPregador(){
     avisar('Preparando o Word' + (atual.slides ? ' e os slides…' : '…'));
     const dx = await docxBlob();
     const pd = atual.slides ? await pdfBlob() : null;
-    await caixaCanivete({ id: 'ultimo', criado: Date.now(), titulo: frasear(atual.titulo), ref: atual.ref || '', data: proximoDomingoISO(),
+    await caixaCanivete({ id: 'ultimo', criado: Date.now(), titulo: frasear(atual.titulo), ref: atual.ref || '', data: atual.data || proximoDomingoISO(),
       docx: dx.blob, nomeDocx: dx.nome, pdf: pd ? pd.blob : null, nomePdf: pd ? pd.nome : null });
     const url = '../pregador-visual/?receber=canivete';
     if (aba) aba.location.href = url; else location.href = url;
@@ -853,12 +858,13 @@ async function abrirKtl(){
   if (!atual) return;
   const p = $('#ktlPainel'); p.classList.add('ativa'); p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   $('#ktlMsg').textContent = ''; $('#ktlOpcoes').innerHTML = ''; $('#bKtlSalvar').disabled = true;
-  $('#ktlAviso').textContent = 'Procurando os cultos do próximo domingo…';
+  const dia = atual.data || proximoDomingoISO();
+  $('#ktlAviso').textContent = 'Procurando os cultos de ' + dataBR(dia) + '…';
   try {
     const c = await clienteLogado();
-    const r = await c.rpc('canivete_domingo', { p_hoje: hojeISO() });
+    const r = await c.rpc('canivete_domingo', { p_hoje: dia });
     if (r.error) throw r.error;
-    ktlCultos = (r.data || []).filter(x => x.culto);
+    ktlCultos = (r.data || []).filter(x => x.culto && x.domingo === dia);
   } catch (e){ ktlCultos = []; $('#ktlAviso').textContent = 'Não consegui ler o calendário (' + (e.message || e) + '). Dá para salvar como documento avulso.'; }
   const titulo = frasear(atual.titulo);
   let marcado = ktlCultos.findIndex(x => mesmaRef(x.texto, atual.ref));
@@ -868,10 +874,10 @@ async function abrirKtl(){
     <span><b>Culto ${x.culto} · ${esc(x.tema || '(sem tema)')}<span class="sit">${SIT[x.situacao] || ''}</span></b>
     <small>${esc(x.texto || '')} · domingo ${dataBR(x.domingo)}${x.documento ? ' · vai ATUALIZAR o documento que já está lá' : ' · vai criar o documento e ligar ao culto'}</small></span></label>`).join('');
   h += `<label class="ktl-op"><input type="radio" name="ktlDest" value="avulso" ${marcado < 0 ? 'checked' : ''}>
-    <span><b>Documento avulso</b><small>Fora do calendário (data: hoje)</small></span></label>`;
+    <span><b>Documento avulso</b><small>Fora do calendário · data ${dataBR(dia)}</small></span></label>`;
   $('#ktlOpcoes').innerHTML = h;
   if (ktlCultos.length) $('#ktlAviso').innerHTML = `Onde guardar “${esc(titulo)}”? ${marcado >= 0 ? 'Já marquei o culto com o mesmo texto bíblico.' : 'Não achei um culto com este texto: escolha.'}`;
-  else if (!/Não consegui/.test($('#ktlAviso').textContent)) $('#ktlAviso').textContent = 'Não há cultos planejados para o próximo domingo no calendário do KTL.';
+  else if (!/Não consegui/.test($('#ktlAviso').textContent)) $('#ktlAviso').textContent = new Date(dia + 'T12:00').getDay() === 0 ? `O calendário do KTL não tem cultos planejados para ${dataBR(dia)}. Salve como documento avulso com essa data.` : `${dataBR(dia)} não é domingo: o sermão será salvo como documento avulso com essa data.`;
   $('#bKtlSalvar').disabled = false;
 }
 async function salvarNoKtl(){
@@ -882,7 +888,7 @@ async function salvarNoKtl(){
   try {
     const c = await clienteLogado();
     const r = await c.rpc('canivete_salvar_sermao', {
-      p_domingo: alvo ? alvo.domingo : null, p_culto: alvo ? alvo.culto : null,
+      p_domingo: atual.data || null, p_culto: alvo ? alvo.culto : null,
       p_titulo: frasear(atual.titulo), p_ref: atual.ref || '', p_conteudo: await folhaParaTexto()
     });
     if (r.error){
@@ -890,7 +896,7 @@ async function salvarNoKtl(){
       throw r.error;
     }
     const res = (r.data || [])[0] || {};
-    const onde = alvo ? `Culto ${alvo.culto} de ${dataBR(alvo.domingo)}` : 'documento avulso';
+    const onde = alvo ? `Culto ${alvo.culto} de ${dataBR(alvo.domingo)}` : `documento avulso de ${dataBR(atual.data)}`;
     const verbo = res.acao === 'atualizado' ? 'Atualizei o sermão do' : res.acao === 'criado' ? 'Criei o sermão e liguei ao' : 'Criei um';
     $('#ktlMsg').innerHTML = `Salvo no KTL ✓ ${verbo} ${onde}. Já aparece na Memória.`;
     atual.ktl = { doc: res.documento, quando: Date.now() }; gravarLS('atelie.rascunho', atual);
@@ -898,6 +904,12 @@ async function salvarNoKtl(){
   $('#bKtlSalvar').disabled = false;
 }
 $('#bKtl').onclick = abrirKtl;
+$('#dataPreg').onchange = e => {
+  if (!atual || !e.target.value) return;
+  atual.data = e.target.value; gravarLS('atelie.rascunho', atual);
+  $('#salvo').textContent = 'Data salva ✓';
+  if ($('#ktlPainel').classList.contains('ativa')) abrirKtl();
+};
 $('#bKtlSalvar').onclick = salvarNoKtl;
 $('#bKtlFechar').onclick = () => $('#ktlPainel').classList.remove('ativa');
 
