@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.4" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.8.5" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.8.4';
+const VERSAO = '0.8.5';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -291,11 +291,16 @@ $('#cData').addEventListener('change', async () => {
   if (TEMAS_ANO[a]) $('#cAno').value = `${a} – ${TEMAS_ANO[a]}`;
   await sugerirNumero(); lerCampos();
 });
+/* número do estudo: o do último estudo publicado no Estudos de Células (pela data) + 1; se não achar, pergunta ao KTL */
 async function sugerirNumero(){
   try {
     const c = await clienteLogado();
-    const r = await c.rpc('canivete_proximo_estudo', { p_data: $('#cData').value || proximaQuarta() });
-    if (!r.error && r.data) $('#cNumero').value = r.data;
+    const data = $('#cData').value || proximaQuarta();
+    const r = await c.from('cel_estudos').select('titulo,data_estudo').eq('arquivado', false).lt('data_estudo', data).order('data_estudo', { ascending: false }).limit(6);
+    const n = (r.data || []).map(x => +((String(x.titulo).match(/^\s*estudo\s*(\d+)/i) || [])[1] || 0)).find(x => x > 0);
+    if (n){ $('#cNumero').value = n + 1; return; }
+    const k = await c.rpc('canivete_proximo_estudo', { p_data: data });
+    if (!k.error && k.data) $('#cNumero').value = k.data;
   } catch {}
 }
 
@@ -337,7 +342,7 @@ Como deve ser a versão dos adolescentes:
 - No fim, um desafio com passos práticos numerados.`;
 
 /* pede à IA e devolve o texto bruto; se a resposta vier cortada pelo tamanho, pede a continuação */
-async function pedirBruto(sistema, pedido, maxTokens, modoJSON){
+async function pedirBruto(sistema, pedido, maxTokens, modo){
   let txt = '';
   for (let volta = 0; volta < 5; volta++){
     const msgs = [{ role: 'user', content: sistema + '\n\n---\n\n' + pedido }];
@@ -350,7 +355,11 @@ async function pedirBruto(sistema, pedido, maxTokens, modoJSON){
     const parte = (j.content || []).filter(c => c.type === 'text' || c.text).map(c => c.text || '').join('');
     txt += parte;
     gravarLS('estudo.ultimaIA', { quando: new Date().toISOString(), stop: j.stop_reason, texto: txt.slice(-4000) });
-    const cortada = j.stop_reason === 'max_tokens' || (modoJSON && !j.stop_reason && !/\}\s*(```)?\s*$/.test(txt));
+    const fim = txt.replace(/\s+$/, '');
+    const completa = modo === 'json' ? /\}\s*(```)?$/.test(fim)
+      : modo === 'frase' ? /PERGUNTAS?[^:\n]*:\s*\S.*[?.!"”)]$/i.test(fim.replace(/\*\*/g, ''))
+      : /[.!?"”)…:]$/.test(fim);
+    const cortada = j.stop_reason === 'max_tokens' || !completa;
     if (!cortada) break;
   }
   if (!txt.trim()) throw new Error('a IA devolveu uma resposta em branco');
@@ -360,7 +369,7 @@ async function pedirJSON(sistema, pedido, maxTokens){
   let ultimoErro;
   for (let tentativa = 0; tentativa < 2; tentativa++){
     try {
-      const txt = await pedirBruto(sistema, pedido + '\n\nResponda SOMENTE com o objeto JSON válido, sem texto antes ou depois e sem crases.', maxTokens, true);
+      const txt = await pedirBruto(sistema, pedido + '\n\nResponda SOMENTE com o objeto JSON válido, sem texto antes ou depois e sem crases.', maxTokens, 'json');
       const ini = txt.indexOf('{'), fim = txt.lastIndexOf('}');
       if (ini < 0 || fim < ini) throw new Error('a resposta da IA veio fora do formato');
       return lerJSON(txt.slice(ini, fim + 1));
@@ -375,11 +384,11 @@ Responda em TEXTO SIMPLES, sem JSON, sem Markdown, sem título e sem comentário
 Depois dos parágrafos, termine com exatamente estas duas linhas:
 FRASE: a frase de impacto do ponto
 PERGUNTAS: uma ou duas perguntas para discussão em grupo` : ''}`;
-async function pedirTexto(sistema, pedido, maxTokens){
+async function pedirTexto(sistema, pedido, maxTokens, comFrase){
   let ultimoErro;
   for (let tentativa = 0; tentativa < 2; tentativa++){
     try {
-      const txt = await pedirBruto(sistema, pedido, maxTokens, false);
+      const txt = await pedirBruto(sistema, pedido + FORMATO_TEXTO(comFrase), maxTokens, comFrase ? 'frase' : 'texto');
       const out = { paragrafos: [], frase: '', perguntas: '' };
       let campo = null;
       txt.replace(/\r/g, '').split('\n').forEach(l => {
@@ -392,6 +401,7 @@ async function pedirTexto(sistema, pedido, maxTokens){
         if (campo) out[campo] = (out[campo] + ' ' + t).trim(); else out.paragrafos.push(t);
       });
       if (out.paragrafos.join(' ').split(/\s+/).length < 60) throw new Error('a resposta da IA veio curta demais');
+      if (comFrase && (!out.frase || !out.perguntas)) throw new Error('a resposta veio sem a frase de impacto ou sem as perguntas');
       out.frase = limparAspas(out.frase);
       return out;
     } catch (e){ ultimoErro = e; }
@@ -485,7 +495,7 @@ PLANO JÁ DEFINIDO:
 ${resumoPlano()}
 
 Escreva a PRIMEIRA METADE do PONTO ${k + 1}: "${pl.titulo}" (${pl.foco}).
-Esta metade é a EXEGESE: explicação do texto a que o ponto se refere (contexto, palavras importantes, sentido), entre 300 e 350 palavras. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.${k ? ' Comece retomando brevemente o ponto anterior ("' + est.plano[k - 1].titulo + '").' : ''}` + FORMATO_TEXTO(false), 1500);
+Esta metade é a EXEGESE: explicação do texto a que o ponto se refere (contexto, palavras importantes, sentido), entre 300 e 350 palavras. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.${k ? ' Comece retomando brevemente o ponto anterior ("' + est.plano[k - 1].titulo + '").' : ''}`, 1500, false);
       pt.parte1 = lista(a.paragrafos);
     };
     const aplicacao = k => async () => {
@@ -497,7 +507,7 @@ ${resumoPlano()}
 
 PONTO ${k + 1}: "${pl.titulo}". A primeira metade (exegese) já está escrita e termina assim: "${pt.parte1.slice(-2).join(' ')}"
 
-Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (analogia, história ou imagem mental clara) e aplicação direta, prática e confrontadora, entre 300 e 400 palavras${k < 2 ? ', terminando com uma transição natural para o ponto ' + (k + 2) + ' ("' + est.plano[k + 1].titulo + '")' : ''}. Depois, a frase de impacto e as perguntas para discussão em grupo.` + FORMATO_TEXTO(true), 1700);
+Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (analogia, história ou imagem mental clara) e aplicação direta, prática e confrontadora, entre 300 e 400 palavras${k < 2 ? ', terminando com uma transição natural para o ponto ' + (k + 2) + ' ("' + est.plano[k + 1].titulo + '")' : ''}. Depois, a frase de impacto e as perguntas para discussão em grupo.`, 1700, true);
       pt.paragrafos = [...pt.parte1, ...lista(b.paragrafos)];
       pt.frase = limparAspas(b.frase); pt.perguntas = String(b.perguntas || '').trim();
     };
@@ -569,7 +579,7 @@ Formato:
       const pa = A.pontos[k];
       const pi = await pedirTexto(sis, base + `\n\nPONTO ${k + 1} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}\nFrase de impacto: ${pa.frase}\nPerguntas: ${pa.perguntas}
 
-Adapte SOMENTE este ponto para os adolescentes (400 a 500 palavras), com o título "${titulos[k] || pa.titulo}". Ilustrações novas do mundo deles. Frase de impacto nova, curta e memorável. Perguntas para o grupo de adolescentes.` + FORMATO_TEXTO(true), 2000);
+Adapte SOMENTE este ponto para os adolescentes (400 a 500 palavras), com o título "${titulos[k] || pa.titulo}". Ilustrações novas do mundo deles. Frase de impacto nova, curta e memorável. Perguntas para o grupo de adolescentes.`, 2000, true);
       T.pontos[k] = { titulo: String(titulos[k] || pa.titulo).toUpperCase(), paragrafos: lista(pi.paragrafos), frase: limparAspas(pi.frase), perguntas: String(pi.perguntas || '').trim() };
     };
     const final = async () => {
@@ -866,6 +876,7 @@ async function tituloPub(c, v, S){
     : fraseado(S.titulo);
   const m = modelo.match(/^\s*(estudo)\s*\d+\s*([-–—:])\s*/i);
   if (m) t = `${caixaAlta ? 'ESTUDO' : 'Estudo'} ${E.campos.numero} ${m[2]} ${t}`;
+  if (v === 'adolescentes' && !/\bRDA\b/.test(t)) t += ' - RDA';
   return t;
 }
 function abrirPub(){
