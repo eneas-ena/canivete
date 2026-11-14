@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Canivete" data-versao="0.8.6" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.9.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -60,7 +60,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;fl
 .linha .txt b{font-weight:500;font-size:15px}
 .linha .txt span{font-size:13px;color:var(--mudo)}
 .selo{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap}
-.s-pronto{background:var(--ok-bg);color:var(--ok-fg)} .s-rascunho{background:var(--meio-bg);color:var(--meio-fg)} .s-planejado{background:var(--novo-bg);color:var(--novo-fg)}
+.s-sug{background:transparent;color:var(--mudo);border:1px dashed var(--borda)} .s-pronto{background:var(--ok-bg);color:var(--ok-fg)} .s-rascunho{background:var(--meio-bg);color:var(--meio-fg)} .s-planejado{background:var(--novo-bg);color:var(--novo-fg)}
 .botoes{display:flex;flex-wrap:wrap;gap:8px}
 .btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--borda);background:transparent;color:var(--texto);font-size:14px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn.ouro{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
@@ -197,7 +197,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.8.6';
+const VERSAO = '0.9.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -220,6 +220,7 @@ const COMODOS = {
     ['Gerador de slides', 'Slides dos sermões', 'https://eneas-ena.github.io/gerador-slides/']
   ],
   'Rebanho': [
+    ['Planejar', 'Cultos da semana e estudos do mês', 'planejar.html'],
     ['Ateliê do Estudo', 'Devocional → estudo das células (adultos e RDA)', 'estudo.html'],
     ['Receber', 'Visitantes e decisões', 'https://eneas-ena.github.io/receber/'],
     ['Estudos de Células', 'Estudos semanais', 'https://igreja-vidas.github.io/estudos-celulas/'],
@@ -319,9 +320,12 @@ const ROT_SIT = { pronto: 'Pronto', rascunho: 'Rascunho', planejado: 'Planejado'
 let contexto = { domingo: [], estudos: [], agenda: [], mural: [], dev: null };
 
 async function carregarChave(c){
-  const [rd, re] = await Promise.all([
+  const qua = proximaQuarta();
+  const [rd, re, rp, rc] = await Promise.all([
     c.rpc('canivete_domingo', { p_hoje: HOJE }),
-    c.rpc('canivete_estudos', { p_hoje: HOJE })
+    c.rpc('canivete_estudos', { p_hoje: HOJE }),
+    c.from('canivete_plano_estudos').select('*').eq('data_estudo', qua).maybeSingle(),
+    c.from('cel_estudos').select('publico,data_estudo').eq('data_estudo', qua).eq('arquivado', false)
   ]);
   if (rd.error && /canivete_domingo|function/i.test(rd.error.message || '')){
     $('#chaveCorpo').innerHTML = '<div class="erro">Falta rodar no Supabase o arquivo <b>canivete_hoje.sql</b>.</div>';
@@ -331,7 +335,7 @@ async function carregarChave(c){
   const est = (re.data || []);
   contexto.domingo = dom; contexto.estudos = est;
   const blocoDom = htmlDomingo(dom, rd.error);
-  const blocoEst = htmlEstudos(est);
+  const blocoEst = htmlEstudos(est, rp && !rp.error ? rp.data : null, rc && !rc.error ? rc.data : []);
   // na quarta (dia das células) os estudos vêm primeiro
   $('#chaveCorpo').innerHTML = dow(HOJE) === 3 ? blocoEst + blocoDom : blocoDom + blocoEst;
 }
@@ -346,8 +350,8 @@ function htmlDomingo(rows, erro){
   if (!sermoes.length){
     return `<div><p class="titulo-grande">${esc(quando)}</p>
       <div class="vazio" style="margin-top:6px">Nenhum sermão planejado ainda no Calendário do KTL para este domingo.
-      Use o campo abaixo para escolher uma chave, ou planeje no KTL.</div>
-      <div class="botoes" style="margin-top:10px"><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir o calendário no KTL</a></div></div>`;
+      Escolha os três cultos em Planejar a semana.</div>
+      <div class="botoes" style="margin-top:10px"><a class="btn ouro" href="planejar.html#semana">Planejar a semana</a><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir o calendário no KTL</a></div></div>`;
   }
   const r0 = rows[0];
   const textos = [...new Set(sermoes.map(s => s.texto).filter(Boolean))];
@@ -360,10 +364,11 @@ function htmlDomingo(rows, erro){
       <span class="rot">Culto ${s.culto}</span>
       <span class="txt"><b>${esc(s.tema || '(sem tema)')}</b><span>${esc(s.texto || '')}</span></span>
       <span class="botoes" style="justify-content:flex-end;align-items:center">
+        ${s.escolhido ? '' : '<span class="selo s-sug" title="Ainda não confirmado em Planejar a semana">Sugestão do KTL</span>'}
         <span class="selo s-${esc(s.situacao)}">${esc(ROT_SIT[s.situacao] || s.situacao || '')}</span>
         ${s.texto ? `<a class="btn peq" href="${memoriaLink(s.texto)}">O que já fiz</a>` : ''}
       </span></div>`).join('')}
-    <div class="botoes"><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir no KTL</a><a class="btn ouro" href="atelie.html">Ateliê do Sermão</a></div>
+    <div class="botoes"><a class="btn${sermoes.every(s => s.escolhido) ? '' : ' ouro'}" href="planejar.html#semana">${sermoes.every(s => s.escolhido) ? 'Planejar a semana' : 'Confirmar a semana'}</a><a class="btn" href="${KTL_URL}" target="_blank" rel="noopener">Abrir no KTL</a><a class="btn${sermoes.every(s => s.escolhido) ? ' ouro' : ''}" href="atelie.html">Ateliê do Sermão</a></div>
   </div>`;
 }
 /* "Romanos 8:1-11", "Romanos 8:18-30" → "Romanos 8" */
@@ -372,16 +377,24 @@ function temLivroComum(textos){
   return caps.length === textos.length && new Set(caps).size === 1 ? caps[0] : '';
 }
 
-function htmlEstudos(rows){
-  if (!rows.length) return `<div class="botoes" style="margin-top:6px;align-items:center"><span class="sub">Nenhum estudo de célula datado para esta semana.</span><a class="btn peq" href="estudo.html">Ateliê do Estudo</a></div>`;
+function proximaQuarta(){ const d = dow(HOJE); return addDias(HOJE, (3 - d + 7) % 7); }
+function htmlEstudos(rows, plano, publicados){
+  const qua = proximaQuarta();
+  const noKtl = rows.filter(e => e.data === qua);
+  const pubs = (publicados || []).filter(p => p.data_estudo === qua);
+  const sit = pubs.length ? ['pronto', `Publicado (${pubs.length})`] : noKtl.length ? ['rascunho', 'Salvo no KTL'] : ['planejado', 'Planejado'];
+  const quando = qua === HOJE ? 'Hoje' : `Quarta, ${dataCurta(qua)}`;
+  let linha;
+  if (plano && plano.sem_estudo) linha = `<div class="linha"><span class="rot">${esc(quando)}</span><span class="txt"><b>Sem estudo de célula nesta semana</b><span>Marcado no plano do mês</span></span><span></span></div>`;
+  else if (plano) linha = `<div class="linha"><span class="rot">${esc(quando)}</span>
+      <span class="txt"><b>${esc(plano.tema || '(sem tema)')}</b><span>${esc(plano.referencia || '')}</span></span>
+      <span class="botoes" style="justify-content:flex-end;align-items:center"><span class="selo s-${sit[0]}">${esc(sit[1])}</span>
+      ${plano.referencia ? `<a class="btn peq" href="${memoriaLink(plano.referencia)}">O que já fiz</a>` : ''}</span></div>`;
+  else linha = `<div class="vazio">Nenhum estudo planejado para ${esc(quando.toLowerCase())}. Escolha os devocionais do mês em Planejar o mês.</div>`;
   return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
-    <div class="grupo-rot">ESTUDOS DE CÉLULA DA SEMANA</div>
-    ${rows.map(e => `<div class="linha">
-      <span class="rot">${esc(dataCurta(e.data))}</span>
-      <span class="txt"><b>${esc(e.titulo || '(sem título)')}</b><span>${esc([e.referencia, e.tema].filter(Boolean).join(' · '))}</span></span>
-      ${e.referencia ? `<a class="btn peq" href="${memoriaLink(e.referencia)}">O que já fiz</a>` : '<span></span>'}
-    </div>`).join('')}
-    <div class="botoes"><a class="btn peq" href="estudo.html">Ateliê do Estudo</a></div>
+    <div class="grupo-rot">ESTUDO DE CÉLULA DA SEMANA</div>
+    ${linha}
+    <div class="botoes">${plano && !plano.sem_estudo ? `<a class="btn${pubs.length ? '' : ' ouro'}" href="estudo.html?data=${qua}">Ateliê do Estudo</a>` : ''}<a class="btn peq" href="planejar.html#mes">Planejar o mês</a></div>
   </div>`;
 }
 

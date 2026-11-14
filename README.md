@@ -16,7 +16,7 @@ O Canivete só **lê** os outros apps; para editar, os botões abrem o app de or
 
 ## Banco de dados (Supabase, projeto quiz-biblico)
 
-Rodar uma vez, nesta ordem: `memoria_etapa1.sql`, `memoria_etapa1b.sql`, `memoria_etapa1c.sql`, `canivete_hoje.sql`, `canivete_salvar.sql` (Salvar no KTL + Memória sempre em dia), `canivete_estudo.sql` (Ateliê do Estudo).
+Rodar uma vez, nesta ordem: `memoria_etapa1.sql`, `memoria_etapa1b.sql`, `memoria_etapa1c.sql`, `canivete_hoje.sql`, `canivete_salvar.sql` (Salvar no KTL + Memória sempre em dia), `canivete_estudo.sql` (Ateliê do Estudo), `canivete_planejar.sql` (Planejar).
 Para atualizar a Memória depois de salvar sermões novos no KTL: `select * from memoria.sincronizar();`
 
 ## Como publicar uma nova versão
