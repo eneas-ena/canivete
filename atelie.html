@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.4.0"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.4.1"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -51,6 +51,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .folha .secao{color:#AB7942;font-weight:700;font-size:18px;margin:22px 0 4px;text-align:left}
 .folha ul{margin:0;padding-left:22px}
 .folha li{margin:0 0 3px}
+.folha li.branco{list-style:none}
+.salvo{font-size:12px;color:var(--mudo);min-width:110px}
 .folha .rot-ilus{color:#AB7942;font-weight:700;font-size:13px;margin:10px 0 2px;text-align:left}
 .folha .frase{text-align:center;font-weight:700;margin:14px 0}
 .folha .frase span{background:#FFFF00}
@@ -89,6 +91,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <button class="btn" type="button" id="bTirar" title="Tirar o bullet onde está o cursor">Tirar bullet</button>
     <span class="dica">Selecione uma frase e toque em Negrito. Pode corrigir o texto direto na folha.</span>
     <span class="sep"></span>
+    <span class="salvo" id="salvo" aria-live="polite"></span>
     <button class="btn" type="button" id="bOutro">Outro arquivo</button>
     <button class="btn ouro" type="button" id="bBaixar">Baixar DOCX</button>
   </div>
@@ -108,7 +111,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.4.0';
+const VERSAO = '0.4.1';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -247,7 +250,13 @@ ent.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) ab
 
 // guarda as correções feitas na folha (se o iPad recarregar, nada se perde)
 let tSalvar = null;
-$('#folha').addEventListener('input', () => { clearTimeout(tSalvar); tSalvar = setTimeout(() => { if (atual){ atual.html = $('#folha').innerHTML; gravarLS('atelie.rascunho', atual); } }, 600); });
+function marcarBrancos(){ $('#folha').querySelectorAll('li').forEach(li => li.classList.toggle('branco', !li.textContent.trim())); }
+$('#folha').addEventListener('input', () => {
+  marcarBrancos();
+  $('#salvo').textContent = 'Salvando…';
+  clearTimeout(tSalvar);
+  tSalvar = setTimeout(() => { if (atual){ atual.html = $('#folha').innerHTML; gravarLS('atelie.rascunho', atual); $('#salvo').textContent = 'Alterações salvas ✓'; } }, 500);
+});
 
 // barra de revisão (mousedown evita perder a seleção no iPad)
 const cmd = c => e => { e.preventDefault(); document.execCommand(c, false, null); $('#folha').dispatchEvent(new Event('input')); };
@@ -300,6 +309,7 @@ function runs(D, el, base){
 }
 async function baixar(){
   const btn = $('#bBaixar'); btn.disabled = true; btn.textContent = 'Gerando…';
+  clearTimeout(tSalvar); if (atual){ atual.html = $('#folha').innerHTML; gravarLS('atelie.rascunho', atual); }
   try {
     const D = await carregarDocx();
     const { Document, Paragraph, TextRun, AlignmentType, Packer, LevelFormat, HighlightColor, UnderlineType } = D;
@@ -321,12 +331,13 @@ async function baixar(){
         filhos.push(vazio(), new Paragraph({ alignment: AlignmentType.CENTER, children: runs(D, el, { bold: true, highlight: 'yellow' }) }), vazio());
       } else if (el.nodeName === 'UL'){
         el.querySelectorAll(':scope > li').forEach(li => {
-          if (!li.textContent.trim()) return;
+          if (!li.textContent.trim()){ filhos.push(vazio()); return; }          // linha em branco que o Bispo pôs
           filhos.push(new Paragraph({ numbering: { reference: 'bullets', level: 0 }, spacing: { after: 40 }, children: runs(D, li) }));
         });
-        if (el.nextElementSibling && el.nextElementSibling.classList.contains('rot-ilus')) {} // o rótulo já dá o respiro
       } else if (el.textContent.trim()){
         filhos.push(new Paragraph({ children: runs(D, el) }));
+      } else {
+        filhos.push(vazio());                                                   // linha em branco fora da lista
       }
     });
     const doc = new Document({
@@ -347,7 +358,7 @@ async function baixar(){
 }
 $('#bBaixar').onclick = baixar;
 
-mostrar();
+mostrar(); marcarBrancos();
 if (atual) $('#msg').innerHTML = `<div class="aviso">Continuando a revisão de “${esc(atual.titulo)}”.</div>`;
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
