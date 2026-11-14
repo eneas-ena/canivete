@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.10.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.10.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -172,6 +172,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <input id="arquivo" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="position:absolute;left:-9999px">
   </label>
   <div id="msg"></div>
+  <div id="reabrir"></div>
 
   <div class="barra" id="barra" role="toolbar" aria-label="Revisão">
     <button class="btn" type="button" id="bNegrito" title="Negrito na seleção"><b>N</b> Negrito</button>
@@ -181,7 +182,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <span class="sep"></span>
     <label class="data-preg" title="Data em que este sermão será pregado">Pregação <input type="date" id="dataPreg"></label>
     <span class="salvo" id="salvo" aria-live="polite"></span>
-    <button class="btn" type="button" id="bOutro">Outro arquivo</button>
+    <button class="btn" type="button" id="bOutro">Novo sermão</button>
     <button class="btn" type="button" id="bSlides">Gerar slides</button>
     <button class="btn ouro" type="button" id="bBaixar">Baixar DOCX</button>
     <button class="btn" type="button" id="bEnviar2" title="Manda o sermão (e os slides, se já gerados) direto para o Pregador">Enviar ao Pregador</button>
@@ -233,7 +234,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.10.0';
+const VERSAO = '0.10.1';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -397,8 +398,22 @@ function tirarBullet(e){
 }
 $('#bTirar').addEventListener('mousedown', tirarBullet);
 $('#bTirar').addEventListener('touchend', tirarBullet);
-$('#bOutro').onclick = () => { if (confirmarTroca()){ atual = null; gravarLS('atelie.rascunho', null); $('#msg').innerHTML = ''; $('#slidesSec').classList.remove('ativa'); mostrar(); } };
-function confirmarTroca(){ return !atual || window.confirm('Começar com outro arquivo? A revisão deste sermão será descartada (baixe o DOCX antes, se quiser).'); }
+/* "Novo sermão": guarda o atual como "último sermão" (dá para reabrir) e volta para gerar ou abrir outro */
+function novoSermao(){
+  if (atual){ gravarLS('atelie.anterior', atual); }
+  atual = null; gravarLS('atelie.rascunho', null);
+  $('#msg').innerHTML = ''; $('#slidesSec').classList.remove('ativa'); $('#ktlPainel').classList.remove('ativa');
+  mostrar(); pintarReabrir(); if ($('#gDom').value) gCarregarCultos();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function pintarReabrir(){
+  const ant = lerLS('atelie.anterior', null);
+  const el = $('#reabrir'); if (!el) return;
+  el.innerHTML = !atual && ant && ant.html ? `<div class="aviso" style="margin-top:10px">O último sermão, “${esc(ant.titulo)}”, ficou guardado. <button class="btn peq" type="button" id="bReabrir">Reabrir</button></div>` : '';
+  const b = $('#bReabrir'); if (b) b.onclick = () => { atual = ant; gravarLS('atelie.rascunho', atual); gravarLS('atelie.anterior', null); el.innerHTML = ''; $('#msg').innerHTML = `<div class="aviso">Continuando a revisão de “${esc(atual.titulo)}”.</div>`; mostrar(); };
+}
+$('#bOutro').onclick = () => { if (!atual || confirm(`Começar um novo sermão?\n\n“${atual.titulo}” fica guardado e pode ser reaberto depois.`)) novoSermao(); };
+function confirmarTroca(){ return true; }
 
 /* =====================================================================
    3. GERAR O DOCX a partir da folha revisada
@@ -953,7 +968,11 @@ $('#bKtlFechar').onclick = () => $('#ktlPainel').classList.remove('ativa');
 
 mostrar(); marcarBrancos();
 if (atual && atual.slides){ $('#slidesSec').classList.add('ativa'); pintarSlides(); }
-if (atual) $('#msg').innerHTML = `<div class="aviso">Continuando a revisão de “${esc(atual.titulo)}”.</div>`;
+/* sermão de um dia que já passou: guarda como "último sermão" e abre a tela limpa, pronta para o próximo */
+{ const h = new Date(), hoje = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`; if (atual && atual.data && atual.data < hoje) novoSermao(); }
+if (atual) $('#msg').innerHTML = `<div class="aviso">Continuando a revisão de “${esc(atual.titulo)}” (pregação em ${atual.data ? atual.data.slice(8, 10) + '/' + atual.data.slice(5, 7) : '—'}). <button class="btn peq" type="button" id="bNovoTopo">Começar outro sermão</button></div>`;
+if ($('#bNovoTopo')) $('#bNovoTopo').onclick = () => $('#bOutro').click();
+pintarReabrir();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
 
