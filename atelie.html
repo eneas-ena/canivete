@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.6.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.7.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,6 +38,14 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .entrada p{margin:8px 0 0;color:var(--mudo);font-size:14px}
 .barra{position:sticky;top:0;z-index:20;margin-top:18px;padding:10px;border-radius:14px;border:1px solid var(--borda);background:var(--cartao);display:none;flex-wrap:wrap;gap:8px;align-items:center}
 .barra.ativa{display:flex}
+.ktl-painel{display:none;margin-top:12px;padding:14px 16px;border-radius:14px;border:1px solid var(--ouro);background:var(--cartao)}
+.ktl-painel.ativa{display:block}
+.ktl-painel h2{margin:0 0 6px;font-family:Cinzel,serif;font-size:14px;letter-spacing:2px;color:var(--ouroTexto)}
+.ktl-op{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--borda);border-radius:10px;margin-top:8px;cursor:pointer;background:var(--cartao2)}
+.ktl-op input{margin-top:3px;accent-color:var(--ouro)}
+.ktl-op b{display:block}
+.ktl-op small{color:var(--mudo)}
+.ktl-op .sit{font-size:11px;padding:1px 7px;border-radius:9px;border:1px solid var(--borda);margin-left:6px;color:var(--mudo)}
 .barra .sep{flex:1}
 .barra .dica{font-size:12px;color:var(--mudo)}
 .aviso{margin-top:12px;font-size:14px;color:var(--mudo)}
@@ -137,7 +145,19 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
     <button class="btn" type="button" id="bSlides">Gerar slides</button>
     <button class="btn ouro" type="button" id="bBaixar">Baixar DOCX</button>
     <button class="btn" type="button" id="bEnviar2" title="Manda o sermão (e os slides, se já gerados) direto para o Pregador">Enviar ao Pregador</button>
+    <button class="btn" type="button" id="bKtl" title="Grava o sermão pronto no KTL (e na Memória)">Salvar no KTL</button>
   </div>
+
+  <section class="ktl-painel" id="ktlPainel" aria-labelledby="hKtl">
+    <h2 id="hKtl">SALVAR NO KTL</h2>
+    <p class="aviso" id="ktlAviso">Procurando os cultos do próximo domingo…</p>
+    <div id="ktlOpcoes" role="radiogroup" aria-label="Onde salvar"></div>
+    <div class="botoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn ouro" type="button" id="bKtlSalvar" disabled>Salvar</button>
+      <button class="btn" type="button" id="bKtlFechar">Cancelar</button>
+    </div>
+    <div id="ktlMsg" class="aviso" aria-live="polite"></div>
+  </section>
 
   <article class="folha" id="folha" contenteditable="true" spellcheck="true" aria-label="Sermão diagramado"></article>
 
@@ -173,7 +193,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.6.1';
+const VERSAO = '0.7.0';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -771,6 +791,115 @@ async function enviarAoPregador(){
 }
 $('#bEnviar').onclick = enviarAoPregador;
 $('#bEnviar2').onclick = enviarAoPregador;
+
+/* =====================================================================
+   6. SALVAR NO KTL — atualiza o sermão do culto no Calendário de Pregação
+   (ou cria um documento, se o culto ainda não tem). A Memória vê na hora.
+   ===================================================================== */
+const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
+const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
+let sb = null;
+function cliente(){
+  if (sb) return sb;
+  if (!window.supabase) return null;
+  sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { storageKey: 'bispo-auth', persistSession: true, autoRefreshToken: true } });
+  return sb;
+}
+async function clienteLogado(){
+  const t0 = Date.now(); let c = cliente();
+  while (!c && Date.now() - t0 < 10000){ await new Promise(ok => setTimeout(ok, 150)); c = cliente(); }
+  if (!c) throw new Error('não consegui carregar a conexão. Verifique a internet.');
+  const s = await c.auth.getSession();
+  if (!(s.data && s.data.session)) throw new Error('entre com seu login primeiro.');
+  return c;
+}
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const dataBR = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '';
+const semAc = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+function mesmaRef(a, b){
+  const ra = lerRef(a), rb = lerRef(b);
+  if (ra && rb) return semAc(ra.nome) === semAc(rb.nome) && ra.cap === rb.cap;
+  return a && b && semAc(a) === semAc(b);
+}
+
+/* A folha vira texto simples para o KTL (texto bíblico entre { }, como o KTL usa) */
+async function folhaParaTexto(){
+  const L = [];
+  for (const el of $('#folha').children){
+    const t = el.textContent.replace(/\s+/g, ' ').trim();
+    if (el.classList.contains('titulo')){ L.push(t); continue; }
+    if (el.classList.contains('texto-base')){
+      L.push('TEXTO: ' + (atual.ref || t.replace(/^TEXTO\s*:\s*/i, '')));
+      let vs = [];
+      try { vs = await versiculosDoPregador(lerRef(atual.ref)); } catch {}
+      if (!vs.length){ const col = lerLS('atelie.textoColado.' + (atual.ref || ''), ''); if (col) vs = versiculosColados(col); }
+      if (vs.length){ L.push('{'); vs.forEach(v => L.push(v.n + ' ' + v.t)); L.push('}'); }
+      continue;
+    }
+    if (el.classList.contains('secao')){ L.push('', t); continue; }
+    if (el.classList.contains('rot-ilus')){ L.push('Ilustração:'); continue; }
+    if (el.nodeName === 'UL'){
+      el.querySelectorAll(':scope > li').forEach(li => { const x = li.textContent.replace(/\s+/g, ' ').trim(); L.push(x ? '• ' + x : ''); });
+      continue;
+    }
+    if (el.classList.contains('frase')){ L.push('', t, ''); continue; }
+    if (t) L.push(t);
+  }
+  return L.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+let ktlCultos = [];
+async function abrirKtl(){
+  if (!atual) return;
+  const p = $('#ktlPainel'); p.classList.add('ativa'); p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  $('#ktlMsg').textContent = ''; $('#ktlOpcoes').innerHTML = ''; $('#bKtlSalvar').disabled = true;
+  $('#ktlAviso').textContent = 'Procurando os cultos do próximo domingo…';
+  try {
+    const c = await clienteLogado();
+    const r = await c.rpc('canivete_domingo', { p_hoje: hojeISO() });
+    if (r.error) throw r.error;
+    ktlCultos = (r.data || []).filter(x => x.culto);
+  } catch (e){ ktlCultos = []; $('#ktlAviso').textContent = 'Não consegui ler o calendário (' + (e.message || e) + '). Dá para salvar como documento avulso.'; }
+  const titulo = frasear(atual.titulo);
+  let marcado = ktlCultos.findIndex(x => mesmaRef(x.texto, atual.ref));
+  if (marcado < 0) marcado = ktlCultos.findIndex(x => semAc(x.tema) === semAc(titulo));
+  const SIT = { pronto: 'Pronto', rascunho: 'Rascunho', planejado: 'Planejado' };
+  let h = ktlCultos.map((x, i) => `<label class="ktl-op"><input type="radio" name="ktlDest" value="${i}" ${i === marcado ? 'checked' : ''}>
+    <span><b>Culto ${x.culto} · ${esc(x.tema || '(sem tema)')}<span class="sit">${SIT[x.situacao] || ''}</span></b>
+    <small>${esc(x.texto || '')} · domingo ${dataBR(x.domingo)}${x.documento ? ' · vai ATUALIZAR o documento que já está lá' : ' · vai criar o documento e ligar ao culto'}</small></span></label>`).join('');
+  h += `<label class="ktl-op"><input type="radio" name="ktlDest" value="avulso" ${marcado < 0 ? 'checked' : ''}>
+    <span><b>Documento avulso</b><small>Fora do calendário (data: hoje)</small></span></label>`;
+  $('#ktlOpcoes').innerHTML = h;
+  if (ktlCultos.length) $('#ktlAviso').innerHTML = `Onde guardar “${esc(titulo)}”? ${marcado >= 0 ? 'Já marquei o culto com o mesmo texto bíblico.' : 'Não achei um culto com este texto: escolha.'}`;
+  else if (!/Não consegui/.test($('#ktlAviso').textContent)) $('#ktlAviso').textContent = 'Não há cultos planejados para o próximo domingo no calendário do KTL.';
+  $('#bKtlSalvar').disabled = false;
+}
+async function salvarNoKtl(){
+  const sel = document.querySelector('input[name="ktlDest"]:checked');
+  if (!sel){ $('#ktlMsg').textContent = 'Escolha onde salvar.'; return; }
+  const alvo = sel.value === 'avulso' ? null : ktlCultos[+sel.value];
+  $('#bKtlSalvar').disabled = true; $('#ktlMsg').textContent = 'Salvando no KTL…';
+  try {
+    const c = await clienteLogado();
+    const r = await c.rpc('canivete_salvar_sermao', {
+      p_domingo: alvo ? alvo.domingo : null, p_culto: alvo ? alvo.culto : null,
+      p_titulo: frasear(atual.titulo), p_ref: atual.ref || '', p_conteudo: await folhaParaTexto()
+    });
+    if (r.error){
+      if (/canivete_salvar_sermao|function/i.test(r.error.message || '')) throw new Error('falta rodar no Supabase o arquivo canivete_salvar.sql.');
+      throw r.error;
+    }
+    const res = (r.data || [])[0] || {};
+    const onde = alvo ? `Culto ${alvo.culto} de ${dataBR(alvo.domingo)}` : 'documento avulso';
+    const verbo = res.acao === 'atualizado' ? 'Atualizei o sermão do' : res.acao === 'criado' ? 'Criei o sermão e liguei ao' : 'Criei um';
+    $('#ktlMsg').innerHTML = `Salvo no KTL ✓ ${verbo} ${onde}. Já aparece na Memória.`;
+    atual.ktl = { doc: res.documento, quando: Date.now() }; gravarLS('atelie.rascunho', atual);
+  } catch (e){ $('#ktlMsg').textContent = 'Não consegui salvar: ' + (e.message || e); }
+  $('#bKtlSalvar').disabled = false;
+}
+$('#bKtl').onclick = abrirKtl;
+$('#bKtlSalvar').onclick = salvarNoKtl;
+$('#bKtlFechar').onclick = () => $('#ktlPainel').classList.remove('ativa');
 
 mostrar(); marcarBrancos();
 if (atual && atual.slides){ $('#slidesSec').classList.add('ativa'); pintarSlides(); }
