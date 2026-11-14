@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Canivete" data-versao="0.9.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.9.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -59,6 +59,15 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;fl
 .linha .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .linha .txt b{font-weight:500;font-size:15px}
 .linha .txt span{font-size:13px;color:var(--mudo)}
+.dev-leitura{font-size:16px;line-height:1.6}
+.dev-leitura .dv-tema{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ouroTexto);margin-bottom:10px}
+.dev-leitura blockquote{margin:0 0 16px;padding:2px 0 2px 16px;border-left:3px solid var(--ouro);font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;line-height:1.45}
+.dev-leitura p{margin:0 0 12px}
+.dev-leitura .dv-rot{font-weight:600;color:var(--ouroTexto);margin:14px 0 4px}
+.dev-leitura .dv-caixa{border-radius:14px;padding:12px 14px;margin-top:12px}
+.dev-leitura .dv-caixa h4{margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase}
+.dev-leitura .dv-caixa p{margin:0}
+.dev-leitura .ap{background:rgba(201,162,39,.16)} .dev-leitura .or{background:rgba(190,70,90,.16)} .dev-leitura .lt{background:rgba(80,120,200,.16)}
 .selo{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap}
 .s-sug{background:transparent;color:var(--mudo);border:1px dashed var(--borda)} .s-pronto{background:var(--ok-bg);color:var(--ok-fg)} .s-rascunho{background:var(--meio-bg);color:var(--meio-fg)} .s-planejado{background:var(--novo-bg);color:var(--novo-fg)}
 .botoes{display:flex;flex-wrap:wrap;gap:8px}
@@ -197,7 +206,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.9.0';
+const VERSAO = '0.9.1';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -518,7 +527,7 @@ async function carregarVidaPlena(c){
     vp.from('tarefas').select('*').limit(5000),
     vp.from('tarefa_ocorrencias').select('*').gte('data', addDias(HOJE, -120)).limit(5000),
     vp.from('eventos').select('*').limit(5000),
-    vp.from('devocionais').select('data,titulo,referencia,texto_biblico,reflexao').eq('data', HOJE).maybeSingle(),
+    vp.from('devocionais').select('*').eq('data', HOJE).maybeSingle(),
     vp.from('backup_execucoes').select('status,inicio,fim,tarefa_nome,mensagem').order('inicio', { ascending: false }).limit(5)
   ]);
   pintarMural(rt, ro, rev);
@@ -551,8 +560,35 @@ function pintarDevocional(r){
   $('#devCorpo').innerHTML = `<p class="dev-tit">${esc(devocional.titulo || 'Devocional de hoje')}</p>
     ${devocional.referencia ? `<div class="sub">${esc(devocional.referencia)}</div>` : ''}
     <div class="botoes"><button class="btn ouro" type="button" id="bLerDev">Ler agora</button></div>`;
-  $('#bLerDev').onclick = () => abrirPainel(devocional.titulo || 'Devocional', devocional.referencia || '',
-    [devocional.texto_biblico, devocional.reflexao].filter(Boolean).join('\n\n'), true);
+  $('#bLerDev').onclick = () => abrirPainel(devocional.titulo || 'Devocional', devocional.referencia || '', htmlDevocional(devocional), false);
+}
+/* o devocional inteiro, como no Vida Plena: tema, texto bíblico, reflexão, aplicação, oração e leitura anual */
+function partesReflexao(txt){
+  txt = String(txt || '').replace(/\r/g, '');
+  let leitura = '', corpo = txt;
+  const k = txt.search(/Leitura Anual da B[íi]blia/i);
+  if (k >= 0){ leitura = txt.slice(k).replace(/^Leitura Anual da B[íi]blia\s*/i, '').replace(/\n\s*\n/g, '\n').trim(); corpo = txt.slice(0, k); }
+  const paras = []; let tema = '';
+  corpo.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean).forEach((b, i) => {
+    const rot = b.match(/^(\p{Extended_Pictographic}\uFE0F?\s*)?([A-ZÀ-Ú][\p{L} ]{1,24}):\s*$/u);
+    if (rot){ paras.push({ tipo: 'lbl', txt: rot[2] }); return; }
+    if (i === 0 && b.length < 70 && !/[.!?]$/.test(b) && !b.includes('\n')){ tema = b; return; }
+    const inl = b.match(/^(Ilustração|Reflexão|Conclusão|Explicação|Aplicação):\s*(.+)$/s);
+    if (inl){ paras.push({ tipo: 'lbl', txt: inl[1] }); paras.push({ tipo: 'p', txt: inl[2] }); return; }
+    paras.push({ tipo: 'p', txt: b });
+  });
+  return { tema, paras, leitura };
+}
+function htmlDevocional(d){
+  const P = partesReflexao(d.reflexao);
+  return `<div class="dev-leitura">
+    ${P.tema ? `<div class="dv-tema">${esc(P.tema)}</div>` : ''}
+    ${d.texto_biblico ? `<blockquote>${esc(d.texto_biblico)}</blockquote>` : ''}
+    ${P.paras.map(x => x.tipo === 'lbl' ? `<div class="dv-rot">${esc(x.txt)}</div>` : `<p>${esc(x.txt).replace(/\n/g, '<br>')}</p>`).join('')}
+    ${d.aplicacao ? `<div class="dv-caixa ap"><h4>Aplicação prática</h4><p>${esc(d.aplicacao)}</p></div>` : ''}
+    ${d.oracao ? `<div class="dv-caixa or"><h4>Oração</h4><p>${esc(d.oracao)}</p></div>` : ''}
+    ${P.leitura ? `<div class="dv-caixa lt"><h4>Leitura anual da Bíblia</h4><p>${esc(P.leitura)}</p></div>` : ''}
+  </div>`;
 }
 
 function pintarBackup(r){

@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.9.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.9.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.9.0';
+const VERSAO = '0.9.1';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -237,7 +237,7 @@ async function carregarMes(){
   $('#devAviso').textContent = 'Carregando…'; $('#devs').innerHTML = '';
   try {
     const c = await clienteLogado();
-    const r = await c.schema('vidaplena').from('devocionais').select('data,titulo,referencia,texto_biblico,reflexao').gte('data', ini).lte('data', fim).order('data');
+    const r = await c.schema('vidaplena').from('devocionais').select('data,titulo,referencia,texto_biblico,reflexao,aplicacao,oracao').gte('data', ini).lte('data', fim).order('data');
     if (r.error) throw r.error;
     devsDoMes = r.data || [];
   } catch (e){ devsDoMes = []; $('#devAviso').innerHTML = `<span class="erro">Não consegui ler os devocionais: ${esc(e.message || e)}</span>`; return; }
@@ -271,14 +271,14 @@ async function conferirMemoria(){
 $('#devs').addEventListener('click', async ev => {
   const b = ev.target.closest('.dev'); if (!b) return;
   const d = devsDoMes[+b.dataset.i];
-  E.dev = { data: d.data, titulo: d.titulo, referencia: d.referencia, texto_biblico: d.texto_biblico, reflexao: d.reflexao };
+  E.dev = { data: d.data, titulo: d.titulo, referencia: d.referencia, texto_biblico: d.texto_biblico, reflexao: d.reflexao, aplicacao: d.aplicacao, oracao: d.oracao };
   $('#cTema').value = d.titulo || ''; $('#cRef').value = d.referencia || ''; $('#cIdeia').value = '';
   lerCampos(); guardar(); pintarDevs(); mostrarLeitura();
   $('#msg').innerHTML = `<div class="aviso">Devocional de ${dataBR(d.data)} escolhido. Confira os dados e toque em “Gerar estudo dos adultos”.</div>`;
 });
 function mostrarLeitura(){
   const d = E.dev; $('#leitura').hidden = !d; if (!d) return;
-  $('#leituraTxt').innerHTML = `<p><b>${esc(d.titulo || '')}</b> · ${esc(d.referencia || '')}</p>${d.texto_biblico ? `<p><i>${esc(d.texto_biblico)}</i></p>` : ''}${String(d.reflexao || '').split(/\n+/).map(p => `<p>${esc(p)}</p>`).join('')}`;
+  $('#leituraTxt').innerHTML = `<p><b>${esc(d.titulo || '')}</b> · ${esc(d.referencia || '')}</p>${d.texto_biblico ? `<p><i>${esc(d.texto_biblico)}</i></p>` : ''}${String(d.reflexao || '').split(/\n+/).map(p => `<p>${esc(p)}</p>`).join('')}${d.aplicacao ? `<p><b>Aplicação prática:</b> ${esc(d.aplicacao)}</p>` : ''}${d.oracao ? `<p><b>Oração:</b> ${esc(d.oracao)}</p>` : ''}`;
 }
 
 /* ---------- campos ---------- */
@@ -450,7 +450,7 @@ Texto bíblico: ${c.ref || '(sugira o mais adequado)'}
 Ideia central (Big Idea): ${c.ideia || '(defina a partir do texto e do devocional)'}
 Tempo de duração aproximado: ${c.tempo || 45} minutos
 Público-alvo: adultos das células da Igreja Vidas (${c.ano || ''})
-${d ? `\nDEVOCIONAL QUE INSPIROU O ESTUDO (use como ponto de partida, sem copiar):\nTítulo: ${d.titulo || ''}\nReferência: ${d.referencia || ''}\n${String(d.reflexao || '').slice(0, 2500)}` : ''}`;
+${d ? `\nDEVOCIONAL QUE INSPIROU O ESTUDO (use como ponto de partida, sem copiar):\nTítulo: ${d.titulo || ''}\nReferência: ${d.referencia || ''}\n${String(d.reflexao || '').slice(0, 2500)}${d.aplicacao ? '\nAplicação prática: ' + d.aplicacao : ''}` : ''}`;
 }
 
 async function gerarAdultos(){
@@ -950,7 +950,7 @@ async function aplicarPlano(data){
   if ((E.adultos || E.parcialA) && !confirm(`Começar o estudo planejado para ${dataBR(data)} (${pl.tema || pl.referencia})?\n\nO estudo que está na tela agora (“${(E.adultos || E.parcialA).titulo || ''}”) sai daqui. Se já foi salvo no KTL ou publicado, não se perde nada.`)) return;
   let dev = null;
   if (pl.devocional_data){
-    const d = await c.schema('vidaplena').from('devocionais').select('data,titulo,referencia,texto_biblico,reflexao').eq('data', pl.devocional_data).maybeSingle();
+    const d = await c.schema('vidaplena').from('devocionais').select('data,titulo,referencia,texto_biblico,reflexao,aplicacao,oracao').eq('data', pl.devocional_data).maybeSingle();
     dev = d && d.data ? d.data : null;
   }
   E = { dev, campos: { ...E.campos, data, tema: pl.tema || (dev && dev.titulo) || '', ref: pl.referencia || (dev && dev.referencia) || '', ideia: '', numero: '' }, adultos: null, adolescentes: null };
