@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Comparar versões · Canivete</title>
+<meta name="theme-color" content="#0F1B33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<script src="pesquisa.js"></script>
+<script src="porteiro.js" data-app="Comparar versões" data-versao="0.15.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="../pregador-visual/fflate.min.js"></script>
+<script src="../pregador-visual/biblia.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{ --fundo:#0B1426; --cartao:#13213D; --cartao2:#182A4C; --texto:#F3EEDF; --mudo:#A8B3C7; --borda:#26385C; --ouro:#C9A227; --ouroTexto:#D9B64A; --perigo:#E58B7A; --ok:#7FC79A; --realce:rgba(201,162,39,.16); --dif:rgba(127,199,154,.22); }
+[data-tema="claro"]{ --fundo:#F5F1E6; --cartao:#FFFFFF; --cartao2:#F8F4EA; --texto:#0F1B33; --mudo:#4E5A70; --borda:#E2D9C2; --ouro:#C9A227; --ouroTexto:#7D600B; --perigo:#A33A26; --ok:#2E7D4F; --realce:rgba(201,162,39,.18); --dif:rgba(46,125,79,.16); }
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fundo);color:var(--texto);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-text-size-adjust:100%}
+button,select,input{font:inherit}
+button{cursor:pointer}
+.app{max-width:1400px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 40px)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.marca small{font-family:Cinzel,serif;font-size:12px;letter-spacing:3px;color:var(--ouroTexto)}
+.marca small a{color:inherit;text-decoration:none}
+.marca h1{margin:0;font-family:'Cormorant Garamond',serif;font-size:34px;line-height:1.05}
+.marca p{margin:2px 0 0;color:var(--mudo);font-size:14px}
+.acoes{display:flex;align-items:center;gap:8px}
+.icone{width:44px;height:44px;border-radius:999px;border:1px solid var(--borda);background:var(--cartao);color:var(--ouroTexto);display:flex;align-items:center;justify-content:center}
+.versao{font-size:12px;color:var(--mudo);padding:0 4px}
+.cartao{margin-top:16px;padding:16px 18px;border-radius:16px;border:1px solid var(--borda);background:var(--cartao)}
+.cartao h2{margin:0 0 8px;font-family:Cinzel,serif;font-size:14px;letter-spacing:2px;color:var(--ouroTexto)}
+.aviso{color:var(--mudo);font-size:14px}
+.erro{color:var(--perigo);font-size:14px}
+.linha{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=text],select{color:var(--texto);background:var(--cartao2);border:1px solid var(--borda);border-radius:10px;padding:9px 12px;min-height:44px;color-scheme:dark}
+[data-tema="claro"] input,[data-tema="claro"] select{color-scheme:light}
+#ref{flex:1;min-width:200px;font-size:16px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn.ouro{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
+.btn:disabled{opacity:.45}
+.btn.quadrado{width:44px;padding:0;justify-content:center;font-size:18px}
+.rotulo{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mudo);margin-right:4px}
+.versoes{margin-top:12px}
+.chip{min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--borda);background:var(--cartao2);color:var(--texto);font-size:14px;font-weight:500}
+.chip.sel{border-color:var(--ouro);background:var(--realce)}
+.chip.princ{background:var(--ouro);border-color:var(--ouro);color:#0F1B33;font-weight:600}
+.chip:disabled{opacity:.4}
+.opcoes{margin-top:10px;font-size:14px;gap:16px}
+.opcoes label{display:inline-flex;gap:6px;align-items:center}
+.opcoes input{accent-color:var(--ouro);width:18px;height:18px}
+/* a grade: uma linha por versículo, uma coluna por versão — tudo rola junto */
+.grade-caixa{margin-top:16px;border:1px solid var(--borda);border-radius:16px;background:var(--cartao);overflow:auto;max-height:calc(100vh - 150px);-webkit-overflow-scrolling:touch}
+table.grade{border-collapse:separate;border-spacing:0;width:100%;min-width:var(--largura,600px)}
+.grade th{position:sticky;top:0;z-index:2;background:var(--cartao2);text-align:left;padding:12px 14px;font-family:Cinzel,serif;font-size:14px;letter-spacing:1.5px;color:var(--ouroTexto);border-bottom:1px solid var(--borda)}
+.grade th small{display:block;font-family:Inter,sans-serif;letter-spacing:0;font-size:11px;color:var(--mudo);font-weight:400;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+.grade th.num,.grade td.num{width:44px;text-align:right;padding-right:6px;color:var(--mudo);font-family:Inter,sans-serif;font-size:13px;letter-spacing:0}
+.grade td{vertical-align:top;padding:9px 14px;font-size:16px;line-height:1.6;border-bottom:1px solid var(--borda);min-width:220px}
+.grade td.num{min-width:0;padding-top:12px;font-weight:600}
+.grade tr.ref td{background:var(--realce)}
+.grade tr.ref td.num{color:var(--ouroTexto)}
+.grade td.principal{font-weight:500}
+.grade td .vazio{color:var(--mudo);font-style:italic;font-size:14px}
+.grade mark{background:var(--dif);color:inherit;border-radius:3px;padding:0 1px}
+.grade tr:last-child td{border-bottom:none}
+.vazio-geral{padding:28px 18px;text-align:center}
+#ia{white-space:normal;line-height:1.65;font-size:16px}
+#ia h3{font-family:Cinzel,serif;font-size:13px;letter-spacing:1.5px;color:var(--ouroTexto);margin:16px 0 4px}
+#ia p{margin:6px 0}
+.cursor{display:inline-block;width:8px;height:1em;background:var(--ouroTexto);vertical-align:text-bottom;animation:pisca 1s steps(2) infinite}
+@keyframes pisca{50%{opacity:0}}
+@media (max-width:640px){
+  .grade td{font-size:15px;min-width:200px}
+  .marca h1{font-size:28px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="marca">
+      <small><a href="./">‹ CANIVETE · HOJE</a></small>
+      <h1>Comparar versões</h1>
+      <p>As Bíblias do Pregador Visual, lado a lado</p>
+    </div>
+    <div class="acoes">
+      <span class="versao" id="versao"></span>
+      <button class="icone" id="bTema" type="button" aria-label="Alternar modo claro e escuro"></button>
+      <button class="icone" id="bAtualizar" type="button" aria-label="Atualizar app">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="cartao">
+    <form class="linha" id="fRef" autocomplete="off">
+      <button class="btn quadrado" type="button" id="bAnt" aria-label="Capítulo anterior" title="Capítulo anterior">‹</button>
+      <input type="text" id="ref" placeholder="Referência, ex.: Hebreus 12:1-3" aria-label="Referência bíblica" enterkeyhint="search">
+      <button class="btn quadrado" type="button" id="bProx" aria-label="Próximo capítulo" title="Próximo capítulo">›</button>
+      <button class="btn ouro" type="submit">Abrir</button>
+    </form>
+    <div class="versoes" id="versoes"></div>
+    <div class="linha opcoes">
+      <label><input type="checkbox" id="oCap"> Capítulo inteiro</label>
+      <label><input type="checkbox" id="oDif" checked> Destacar diferenças</label>
+      <span class="aviso" id="msg" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <div id="area"></div>
+
+  <div class="cartao" id="cIA" hidden>
+    <h2>ANÁLISE COMPARATIVA</h2>
+    <p class="aviso" id="iaSub"></p>
+    <div id="ia"></div>
+  </div>
+
+  <div class="cartao" id="cImportar">
+    <h2>BÍBLIAS NESTE APARELHO</h2>
+    <p class="aviso" id="listaBib"></p>
+    <p class="aviso">As Bíblias ficam guardadas no aparelho, não na nuvem. Elas aparecem aqui quando foram importadas no Pregador Visual <b>neste mesmo aparelho e navegador</b>. Se faltar alguma, importe o EPUB aqui; ela passa a valer também no Pregador.</p>
+    <div class="linha"><label class="btn" for="arqEpub">Importar uma Bíblia (EPUB)</label><input type="file" id="arqEpub" accept=".epub,application/epub+zip" hidden><span class="aviso" id="impMsg" aria-live="polite"></span></div>
+  </div>
+</div>
+
+<script>
+const VERSAO = '0.15.0';
+const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
+const IA_MODELO = 'claude-sonnet-5-5';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const lerLS = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+/* ---------- padrões do app ---------- */
+$('#versao').textContent = 'v' + VERSAO;
+const SOL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const LUA = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+function aplicarTema(t){ document.documentElement.dataset.tema = t; $('#bTema').innerHTML = t === 'claro' ? LUA : SOL; gravarLS('canivete.tema', t); }
+aplicarTema(lerLS('canivete.tema', 'escuro'));
+$('#bTema').onclick = () => aplicarTema(document.documentElement.dataset.tema === 'claro' ? 'escuro' : 'claro');
+$('#bAtualizar').onclick = () => { if (window.porteiroAtualizar) window.porteiroAtualizar(); else location.reload(); };
+
+/* =====================================================================
+   1. LIVROS — os mesmos códigos do Pregador Visual
+   ===================================================================== */
+const LIVROS = [
+  ['gn','Gênesis',50],['ex','Êxodo',40],['lv','Levítico',27],['nm','Números',36],['dt','Deuteronômio',34],['js','Josué',24],['jz','Juízes',21],['rt','Rute',4],
+  ['1sm','1 Samuel',31],['2sm','2 Samuel',24],['1rs','1 Reis',22],['2rs','2 Reis',25],['1cr','1 Crônicas',29],['2cr','2 Crônicas',36],['ed','Esdras',10],['ne','Neemias',13],
+  ['et','Ester',10],['jb','Jó',42],['sl','Salmos',150],['pv','Provérbios',31],['ec','Eclesiastes',12],['ct','Cânticos',8],['is','Isaías',66],['jr','Jeremias',52],
+  ['lm','Lamentações',5],['ez','Ezequiel',48],['dn','Daniel',12],['os','Oseias',14],['jl','Joel',3],['am','Amós',9],['ob','Obadias',1],['jn','Jonas',4],
+  ['mq','Miqueias',7],['na','Naum',3],['hc','Habacuque',3],['sf','Sofonias',3],['ag','Ageu',2],['zc','Zacarias',14],['ml','Malaquias',4],
+  ['mt','Mateus',28],['mc','Marcos',16],['lc','Lucas',24],['jo','João',21],['at','Atos',28],['rm','Romanos',16],['1co','1 Coríntios',16],['2co','2 Coríntios',13],
+  ['gl','Gálatas',6],['ef','Efésios',6],['fp','Filipenses',4],['cl','Colossenses',4],['1ts','1 Tessalonicenses',5],['2ts','2 Tessalonicenses',3],['1tm','1 Timóteo',6],
+  ['2tm','2 Timóteo',4],['tt','Tito',3],['fm','Filemom',1],['hb','Hebreus',13],['tg','Tiago',5],['1pe','1 Pedro',5],['2pe','2 Pedro',3],['1jo','1 João',5],
+  ['2jo','2 João',1],['3jo','3 João',1],['jd','Judas',1],['ap','Apocalipse',22]
+];
+const POR_ID = Object.fromEntries(LIVROS.map((l, i) => [l[0], { id: l[0], nome: l[1], caps: l[2], i }]));
+const semAc = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+/* abreviações comuns, além dos nomes por extenso que o Pregador já entende */
+const ABREV = { gen:'gn', gn:'gn', ex:'ex', exo:'ex', lv:'lv', lev:'lv', nm:'nm', num:'nm', dt:'dt', deut:'dt', js:'js', jos:'js', jz:'jz', jui:'jz', rt:'rt',
+  '1sm':'1sm', '2sm':'2sm', '1sam':'1sm', '2sam':'2sm', '1rs':'1rs', '2rs':'2rs', '1cr':'1cr', '2cr':'2cr', ed:'ed', esd:'ed', ne:'ne', nee:'ne', et:'et', est:'et',
+  jo_:'jb', job:'jb', sl:'sl', sal:'sl', salmo:'sl', pv:'pv', prov:'pv', ec:'ec', ecl:'ec', ct:'ct', cant:'ct', is:'is', isa:'is', jr:'jr', jer:'jr', lm:'lm', lam:'lm',
+  ez:'ez', eze:'ez', dn:'dn', dan:'dn', os:'os', jl:'jl', am:'am', ob:'ob', jn:'jn', jon:'jn', mq:'mq', miq:'mq', na:'na', hc:'hc', hab:'hc', sf:'sf', sof:'sf', ag:'ag', zc:'zc', zac:'zc', ml:'ml', mal:'ml',
+  mt:'mt', mat:'mt', mc:'mc', mar:'mc', lc:'lc', luc:'lc', joa:'jo', at:'at', rm:'rm', rom:'rm', '1co':'1co', '2co':'2co', '1cor':'1co', '2cor':'2co', gl:'gl', gal:'gl',
+  ef:'ef', efe:'ef', fp:'fp', fil:'fp', cl:'cl', col:'cl', '1ts':'1ts', '2ts':'2ts', '1tes':'1ts', '2tes':'2ts', '1tm':'1tm', '2tm':'2tm', '1tim':'1tm', '2tim':'2tm',
+  tt:'tt', tit:'tt', fm:'fm', hb:'hb', heb:'hb', tg:'tg', tia:'tg', '1pe':'1pe', '2pe':'2pe', '1ped':'1pe', '2ped':'2pe', '1jo':'1jo', '2jo':'2jo', '3jo':'3jo', jd:'jd', jud:'jd', ap:'ap', apoc:'ap' };
+function idDoLivro(nome){
+  const n = String(nome).trim();
+  if (/^j[óo]$/i.test(n) && /ó/i.test(n)) return 'jb';
+  if (window.PVBiblia){ const id = window.PVBiblia.idDoNome(n); if (id) return id; }
+  const k = semAc(n).replace(/[^a-z0-9]/g, '');
+  if (ABREV[k]) return ABREV[k];
+  const achado = LIVROS.find(l => semAc(l[1]).replace(/[^a-z0-9]/g, '') === k);
+  return achado ? achado[0] : null;
+}
+/* "Hebreus 12:1-3", "1 Jo 3.16", "Sl 23", "Rm 8:28-39", "I Coríntios 13" */
+function lerRef(t){
+  const m = String(t || '').replace(/[–—]/g, '-').match(/^\s*((?:[1-3]|I{1,3})\s*)?([^\d:.,]+?)\s*(\d+)(?:\s*[:.,]\s*(\d+)(?:\s*-\s*(\d+))?)?\s*$/i);
+  if (!m) return null;
+  let pref = (m[1] || '').trim(); if (/^I+$/i.test(pref)) pref = String(pref.length);
+  const id = idDoLivro((pref ? pref + ' ' : '') + m[2].trim()); if (!id) return null;
+  const cap = +m[3]; if (!cap || cap > POR_ID[id].caps) return null;
+  const v1 = m[4] ? +m[4] : 0, v2 = m[5] ? +m[5] : v1;
+  return { id, cap, v1, v2: Math.max(v1, v2) };
+}
+const textoRef = r => `${POR_ID[r.id].nome} ${r.cap}${r.v1 ? ':' + r.v1 + (r.v2 > r.v1 ? '-' + r.v2 : '') : ''}`;
+
+/* =====================================================================
+   2. BÍBLIAS — a lista do Pregador (pv.biblias) e os capítulos no aparelho
+   ===================================================================== */
+let BIBLIAS = lerLS('pv.biblias', []);
+let _db;
+function abrirDB(){
+  if (_db) return Promise.resolve(_db);
+  return new Promise((ok, erro) => {
+    const r = indexedDB.open('pregador-visual-biblias', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('caps', { keyPath: 'chave' });
+    r.onsuccess = () => { _db = r.result; ok(_db); };
+    r.onerror = () => erro(r.error);
+  });
+}
+async function capitulo(sigla, id, cap){
+  try {
+    const d = await abrirDB();
+    return await new Promise(ok => { const q = d.transaction('caps').objectStore('caps').get(`${sigla}|${id}|${cap}`); q.onsuccess = () => ok(q.result ? q.result.v : null); q.onerror = () => ok(null); });
+  } catch { return null; }
+}
+
+/* escolha: uma principal + até 3 para comparar (fica lembrada) */
+const MAX_COMP = 3;
+let escolha = lerLS('canivete.comparar', null);
+function escolhaValida(){
+  const siglas = BIBLIAS.map(b => b.sigla);
+  if (!escolha || !siglas.includes(escolha.principal)){
+    const pad = lerLS('pv.versao', '');
+    const principal = siglas.includes('NAA') ? 'NAA' : siglas.includes(pad) ? pad : siglas[0] || '';
+    escolha = { principal, outras: (escolha && escolha.outras) || siglas.filter(s => s !== principal).slice(0, 2) };
+  }
+  escolha.outras = escolha.outras.filter(s => siglas.includes(s) && s !== escolha.principal).slice(0, MAX_COMP);
+  gravarLS('canivete.comparar', escolha);
+}
+function pintarVersoes(){
+  if (!BIBLIAS.length){ $('#versoes').innerHTML = ''; return; }
+  escolhaValida();
+  const titulo = s => (BIBLIAS.find(b => b.sigla === s) || {}).titulo || s;
+  const cheio = escolha.outras.length >= MAX_COMP;
+  $('#versoes').innerHTML = `<div class="linha"><span class="rotulo">Principal</span>
+    <select id="sPrincipal" aria-label="Versão principal">${BIBLIAS.map(b => `<option value="${esc(b.sigla)}" ${b.sigla === escolha.principal ? 'selected' : ''}>${esc(b.sigla)}</option>`).join('')}</select>
+    <span class="rotulo" style="margin-left:8px">Comparar com</span>
+    ${BIBLIAS.filter(b => b.sigla !== escolha.principal).map(b => {
+      const sel = escolha.outras.includes(b.sigla);
+      return `<button type="button" class="chip${sel ? ' sel' : ''}" data-sigla="${esc(b.sigla)}" title="${esc(titulo(b.sigla))}" aria-pressed="${sel}" ${!sel && cheio ? 'disabled' : ''}>${esc(b.sigla)}</button>`;
+    }).join('')}
+    <span class="aviso">até ${MAX_COMP}</span></div>`;
+  $('#sPrincipal').onchange = e => { escolha.principal = e.target.value; escolha.outras = escolha.outras.filter(s => s !== escolha.principal); gravarLS('canivete.comparar', escolha); pintarVersoes(); mostrar(); };
+  document.querySelectorAll('.chip[data-sigla]').forEach(b => b.onclick = () => {
+    const s = b.dataset.sigla;
+    escolha.outras = escolha.outras.includes(s) ? escolha.outras.filter(x => x !== s) : escolha.outras.concat(s).slice(0, MAX_COMP);
+    gravarLS('canivete.comparar', escolha); pintarVersoes(); mostrar();
+  });
+}
+function pintarLista(){
+  $('#listaBib').innerHTML = BIBLIAS.length
+    ? BIBLIAS.length + ' Bíblia' + (BIBLIAS.length > 1 ? 's' : '') + ': ' + BIBLIAS.map(b => `<b>${esc(b.sigla)}</b>`).join(', ') + '.'
+    : '<span class="erro">Nenhuma Bíblia encontrada neste aparelho.</span>';
+}
+
+/* =====================================================================
+   3. A GRADE — uma linha por versículo, uma coluna por versão
+   ===================================================================== */
+let atual = null;   // { id, cap, v1, v2 }
+let lidos = {};     // textos da tela, para a análise da IA
+const chave = p => semAc(p).replace(/[^a-z0-9]/g, '');
+const palavras = t => String(t).split(/\s+/).map(chave).filter(w => w.length > 2);
+function realcar(texto, base){
+  if (!base) return esc(texto);
+  const conj = new Set(palavras(base));
+  return texto.split(/(\s+)/).map(p => {
+    const k = chave(p);
+    return k.length > 2 && !conj.has(k) ? `<mark>${esc(p)}</mark>` : esc(p);
+  }).join('');
+}
+async function mostrar(rolar){
+  const area = $('#area'); $('#cIA').hidden = true;
+  pintarLista();
+  if (!BIBLIAS.length){
+    area.innerHTML = `<div class="cartao vazio-geral"><p><b>Nenhuma Bíblia neste aparelho.</b></p><p class="aviso">As Bíblias são as que você importou no Pregador Visual, e ficam só no aparelho em que foram importadas. Use “Importar uma Bíblia (EPUB)” lá embaixo, ou abra o Canivete no aparelho em que o Pregador já tem as Bíblias.</p></div>`;
+    return;
+  }
+  if (!atual){ area.innerHTML = '<div class="cartao vazio-geral aviso">Digite uma referência e toque em Abrir.</div>'; return; }
+  const versoes = [escolha.principal, ...escolha.outras];
+  $('#ref').value = textoRef(atual);
+  history.replaceState(null, '', '?ref=' + encodeURIComponent(textoRef(atual)));
+  gravarLS('canivete.comparar.ref', textoRef(atual));
+  const caps = await Promise.all(versoes.map(s => capitulo(s, atual.id, atual.cap)));
+  const nums = new Set();
+  caps.forEach(vs => vs && Object.keys(vs).forEach(k => +k && nums.add(+k)));
+  if (!nums.size){ area.innerHTML = `<div class="cartao vazio-geral aviso">Não achei ${esc(POR_ID[atual.id].nome)} ${atual.cap} nas Bíblias escolhidas.</div>`; return; }
+  const ultimo = Math.max(...nums);
+  const soRef = atual.v1 && !$('#oCap').checked;
+  const ini = soRef ? atual.v1 : 1, fim = soRef ? Math.min(atual.v2, ultimo) : ultimo;
+  const dif = $('#oDif').checked && versoes.length > 1;
+  const titulo = s => (BIBLIAS.find(b => b.sigla === s) || {}).titulo || '';
+  const celula = (vs, v) => {
+    const x = vs && vs[v];
+    if (!x) return { txt: '', html: '<span class="vazio">—</span>' };
+    if (typeof x === 'string' && x[0] === '=') return { txt: '', html: `<span class="vazio">(junto com o v. ${esc(x.slice(1))})</span>` };
+    return { txt: x, html: null };
+  };
+  lidos = {};
+  let linhas = '';
+  for (let v = ini; v <= fim; v++){
+    const naRef = atual.v1 && v >= atual.v1 && v <= atual.v2;
+    const base = celula(caps[0], v);
+    const cols = versoes.map((s, i) => {
+      const c = i === 0 ? base : celula(caps[i], v);
+      if (naRef && c.txt) (lidos[s] = lidos[s] || []).push(v + ' ' + c.txt);
+      const html = c.html || (dif && i > 0 ? realcar(c.txt, base.txt) : esc(c.txt));
+      return `<td class="${i === 0 ? 'principal' : ''}" lang="pt">${html}</td>`;
+    }).join('');
+    linhas += `<tr id="v${v}" class="${naRef && !soRef ? 'ref' : ''}"><td class="num">${v}</td>${cols}</tr>`;
+  }
+  const largura = 60 + versoes.length * 240;
+  area.innerHTML = `<div class="grade-caixa" id="caixa"><table class="grade" style="--largura:${largura}px">
+    <thead><tr><th class="num">v.</th>${versoes.map((s, i) => `<th scope="col">${esc(s)}${i === 0 ? ' · principal' : ''}<small>${esc(titulo(s))}</small></th>`).join('')}</tr></thead>
+    <tbody>${linhas}</tbody></table></div>
+    <div class="linha" style="margin-top:12px">
+      ${atual.v1 && versoes.length > 1 ? '<button class="btn ouro" type="button" id="bIA">Análise comparativa com IA</button>' : ''}
+      ${window.barraPesquisa ? window.barraPesquisa(textoRef(atual), 'Pesquisar também em').replace('<div class="pesq-barra">', '<div class="pesq-barra" style="margin-top:0">') : ''}
+    </div>`;
+  const faltam = versoes.filter((s, i) => !caps[i]);
+  $('#msg').textContent = faltam.length ? `Sem este capítulo: ${faltam.join(', ')}.` : '';
+  if ($('#bIA')) $('#bIA').onclick = analisar;
+  if (rolar !== false && atual.v1 && !soRef){
+    const alvo = document.getElementById('v' + atual.v1), caixa = $('#caixa');
+    if (alvo) caixa.scrollTop = alvo.offsetTop - caixa.querySelector('thead').offsetHeight - 8;
+  }
+}
+
+function abrir(texto){
+  const r = lerRef(texto);
+  if (!r){ $('#msg').innerHTML = '<span class="erro">Não entendi a referência. Exemplos: Hebreus 12:1-3 · Sl 23 · 1 Jo 3:16</span>'; return; }
+  atual = r; mostrar();
+}
+$('#fRef').onsubmit = e => { e.preventDefault(); $('#ref').blur(); abrir($('#ref').value); };
+function andar(d){
+  if (!atual) return;
+  const l = POR_ID[atual.id];
+  let id = atual.id, cap = atual.cap + d;
+  if (cap < 1){ if (l.i === 0) return; const a = LIVROS[l.i - 1]; id = a[0]; cap = a[2]; }
+  if (cap > l.caps){ if (l.i === LIVROS.length - 1) return; id = LIVROS[l.i + 1][0]; cap = 1; }
+  atual = { id, cap, v1: 0, v2: 0 }; mostrar(false);
+  $('#caixa') && ($('#caixa').scrollTop = 0);
+}
+$('#bAnt').onclick = () => andar(-1);
+$('#bProx').onclick = () => andar(1);
+$('#oCap').onchange = () => { gravarLS('canivete.comparar.cap', $('#oCap').checked); mostrar(); };
+$('#oDif').onchange = () => { gravarLS('canivete.comparar.dif', $('#oDif').checked); mostrar(false); };
+$('#oCap').checked = lerLS('canivete.comparar.cap', false);
+$('#oDif').checked = lerLS('canivete.comparar.dif', true);
+
+/* =====================================================================
+   4. ANÁLISE COMPARATIVA COM IA (texto aparecendo na tela)
+   ===================================================================== */
+const PROMPT_ANALISE = `Você é um exegeta e professor de homilética, das tradições batista e pentecostal, que ajuda um pastor a preparar sermões e estudos. Compare traduções da Bíblia em português com rigor e linguagem clara.
+Responda em português do Brasil, sem Markdown (sem #, * ou **). Use os títulos de seção exatamente como pedidos, cada um sozinho numa linha, em MAIÚSCULAS.`;
+async function analisar(){
+  const versoes = [escolha.principal, ...escolha.outras].filter(s => lidos[s]);
+  if (versoes.length < 2){ $('#msg').innerHTML = '<span class="erro">Escolha ao menos duas versões que tenham este texto.</span>'; return; }
+  const ref = textoRef(atual);
+  const textos = versoes.map(s => `${s} (${(BIBLIAS.find(b => b.sigla === s) || {}).titulo || s}):\n${lidos[s].join(' ')}`).join('\n\n');
+  const pedido = `Texto: ${ref}
+
+${textos}
+
+Faça uma análise comparativa destas traduções, com cerca de 450 palavras, nestas seções:
+DIFERENÇAS QUE IMPORTAM
+(as escolhas de tradução que mudam o sentido ou a ênfase, citando as palavras de cada versão)
+O QUE ESTÁ NO ORIGINAL
+(as palavras-chave em grego ou hebraico por trás dessas diferenças, transliteradas e explicadas de forma simples, e qual tradução fica mais perto do original em cada caso)
+PARA A PREGAÇÃO
+(qual versão usar para ler em público e qual citar para iluminar um ponto, e uma ou duas ideias de aplicação que as diferenças sugerem)`;
+  const caixa = $('#ia'), btn = $('#bIA');
+  $('#cIA').hidden = false; $('#iaSub').textContent = ref + ' · ' + versoes.join(', ');
+  caixa.innerHTML = '<span class="aviso">Conectando à IA…</span>'; btn.disabled = true;
+  $('#cIA').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  let texto = '';
+  const pintar = fim => {
+    caixa.innerHTML = texto.split(/\n+/).map(l => l.trim()).filter(Boolean).map(l =>
+      /^[A-ZÀ-Ý][A-ZÀ-Ý\s]{6,}$/.test(l.replace(/[:.]$/, '')) ? `<h3>${esc(l.replace(/[:.]$/, ''))}</h3>` : `<p>${esc(l.replace(/\*\*/g, ''))}</p>`).join('') + (fim ? '' : '<span class="cursor"></span>');
+  };
+  try {
+    const r = await fetch(IA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: IA_MODELO, thinking: { type: 'between_tools' }, max_tokens: 3000, system: PROMPT_ANALISE, messages: [{ role: 'user', content: pedido }], stream: true }) });
+    if (!r.ok || !r.body){
+      const b = await r.text().catch(() => ''); let m = 'erro ' + r.status;
+      try { const j = JSON.parse(b); m = typeof j.error === 'string' ? j.error : (j.error && j.error.message) || m; } catch {}
+      throw new Error(m);
+    }
+    const leitor = r.body.getReader(), dec = new TextDecoder();
+    let buf = '', todo = '', ehJSON = null;
+    const linha = l => {
+      l = l.trim(); if (!l.startsWith('data:')) return;
+      let ev; try { ev = JSON.parse(l.slice(5)); } catch { return; }
+      if (ev.type === 'content_block_delta' && ev.delta && typeof ev.delta.text === 'string'){ texto += ev.delta.text; pintar(false); }
+      else if (ev.type === 'error') throw new Error((ev.error && ev.error.message) || 'erro da IA');
+    };
+    for (;;){
+      const { done, value } = await leitor.read(); if (done) break;
+      const p = dec.decode(value, { stream: true });
+      if (ehJSON === null && p.trim()) ehJSON = p.trim().startsWith('{');
+      if (ehJSON){ todo += p; continue; }
+      buf += p; let k; while ((k = buf.indexOf('\n')) >= 0){ linha(buf.slice(0, k)); buf = buf.slice(k + 1); }
+    }
+    if (buf) linha(buf);
+    if (ehJSON){ const j = JSON.parse(todo); if (j.error) throw new Error(j.error.message || j.error); texto = (j.content || []).map(c => c.text || '').join(''); }
+    if (!texto.trim()) throw new Error('a IA não mandou texto');
+    pintar(true);
+  } catch (e){
+    caixa.innerHTML = (texto ? caixa.innerHTML.replace('<span class="cursor"></span>', '') : '') + `<p class="erro">Parou: ${esc(e.message || e)}. Toque de novo em “Análise comparativa com IA”.</p>`;
+  }
+  if (btn) btn.disabled = false;
+}
+
+/* =====================================================================
+   5. IMPORTAR UMA BÍBLIA AQUI (o mesmo leitor de EPUB do Pregador)
+   ===================================================================== */
+$('#arqEpub').onchange = async e => {
+  const arq = e.target.files[0]; e.target.value = ''; if (!arq) return;
+  const msg = $('#impMsg');
+  if (!window.PVBiblia || !window.fflate){ msg.innerHTML = '<span class="erro">Não consegui carregar o leitor de EPUB. Abra com internet e tente de novo.</span>'; return; }
+  msg.textContent = 'Lendo o EPUB…';
+  let r;
+  try { r = await window.PVBiblia.lerEpub(await arq.arrayBuffer()); }
+  catch (er){
+    const m = String(er.message);
+    msg.innerHTML = `<span class="erro">${m === 'drm' ? 'Este EPUB tem proteção contra cópia (DRM).' : m === 'nao_epub' ? 'Este arquivo não é um EPUB.' : 'Não reconheci a organização deste EPUB.'}</span>`; return;
+  }
+  const sigla = (prompt(`Encontrei ${r.nLivros} livros e ${r.total.toLocaleString('pt-BR')} versículos.\n\nSigla da versão:`, r.sigla || '') || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!sigla){ msg.textContent = 'Importação cancelada.'; return; }
+  msg.textContent = 'Guardando neste aparelho…';
+  try {
+    await window.PVBiblia.guardar(sigla, r.livros);
+    BIBLIAS = lerLS('pv.biblias', []).filter(b => b.sigla !== sigla).concat([{ sigla, titulo: r.titulo || sigla, total: r.total, data: new Date().toISOString() }]);
+    gravarLS('pv.biblias', BIBLIAS);
+    if (!lerLS('pv.versao', '')) gravarLS('pv.versao', sigla);
+    msg.textContent = `Bíblia ${sigla} pronta neste aparelho.`;
+    pintarVersoes(); mostrar();
+  } catch { msg.innerHTML = '<span class="erro">Não consegui guardar (falta espaço no aparelho?).</span>'; }
+};
+
+/* ---------- início ---------- */
+pintarVersoes();
+{
+  const q = new URLSearchParams(location.search).get('ref') || lerLS('canivete.comparar.ref', '');
+  if (q) abrir(q); else mostrar();
+}
+</script>
+</body>
+</html>

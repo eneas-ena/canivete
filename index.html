@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Canivete" data-versao="0.14.5" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.15.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -207,7 +207,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.14.5';
+const VERSAO = '0.15.0';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -215,6 +215,7 @@ const KTL_URL = 'https://ktl-bispo.eneaspr.workers.dev/';
 
 const COMODOS = {
   'Palavra': [
+    ['Comparar versões', 'As Bíblias do Pregador lado a lado', 'comparar.html'],
     ['Levar para a Memória', 'Cursos, apostilas e pesquisas', 'importar.html'],
     ['InterTextus', 'Bíblia interlinear', 'https://eneas-ena.github.io/interlinear/'],
     ['Anagnosis', 'Grego e hebraico', 'https://eneas-ena.github.io/anagnosis/'],
