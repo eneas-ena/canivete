@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.13.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.14.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,6 +54,12 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .g-campos .largo{grid-column:1/-1}
 .g-campos textarea{min-height:56px;resize:vertical}
 .g-botoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.g-modo{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 2px;font-size:14px} .g-modo small{color:var(--mudo)} .g-modo input{accent-color:var(--ouroTexto)}
+.g-ao-vivo{margin-top:12px;border:1px solid var(--borda,#444);border-radius:10px;background:var(--cartao,transparent);max-height:420px;overflow:auto;padding:10px 14px}
+.g-ao-vivo-topo{position:sticky;top:-10px;background:inherit;font-size:12px;color:var(--mudo);padding:4px 0}
+#gTextoVivo{white-space:pre-wrap;font-size:15px;line-height:1.55}
+#gTextoVivo .cursor{display:inline-block;width:8px;height:1em;background:var(--ouroTexto);vertical-align:text-bottom;animation:pisca 1s steps(2) infinite}
+@keyframes pisca{50%{opacity:0}}
 .g-passos{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
 .g-passos li::before{content:'○ ';color:var(--mudo)} .g-passos li.feito::before{content:'✓ ';color:#7FC79A} .g-passos li.indo::before{content:'◔ ';color:var(--ouroTexto)} .g-passos li.falhou::before{content:'✗ ';color:#E58B7A}
 .g-ou{text-align:center;margin:16px 0 0}
@@ -161,8 +167,13 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
       <label class="largo">Público-alvo <input type="text" id="gPublico"></label>
     </div>
     <div id="gPesq"></div>
+    <div class="g-modo" role="radiogroup" aria-label="Forma de gerar">
+      <label><input type="radio" name="gModo" value="linear" checked> Escrita contínua <small>(o texto aparece na tela, como no ChatGPT)</small></label>
+      <label><input type="radio" name="gModo" value="partes"> Por partes <small>(a forma antiga)</small></label>
+    </div>
     <div class="g-botoes"><button class="btn ouro" type="button" id="bGerarSermao">Gerar sermão</button><button class="btn" type="button" id="bGerarDescartar" hidden>Descartar a geração</button></div>
     <ol class="g-passos" id="gPassos"></ol>
+    <div class="g-ao-vivo" id="gAoVivo" hidden><div class="g-ao-vivo-topo"><span id="gContador">0 palavras</span></div><div id="gTextoVivo"></div></div>
     <div id="gMsg" aria-live="polite"></div>
     <p class="aviso g-ou">— ou, se o sermão já foi gerado fora (Adapta) —</p>
   </section>
@@ -236,7 +247,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.13.2';
+const VERSAO = '0.14.0';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -1065,19 +1076,28 @@ async function gTexto(pedido, maxTokens, comMarcas){
       const txt = await gBruto(pedido + formato, maxTokens, completa);
       const out = { paragrafos: [], ilustracao: [], aplicacao: [], frase: '' };
       let alvo = comMarcas ? 'ilustracao' : 'paragrafos';
+      const marca = (x, nome) => { const r = new RegExp('^' + nome + '\\s*(?::\\s*(.*)|[.\\-–—]?\\s*$)', 'i'); const m = x.match(r); return m ? { resto: (m[1] || '').trim() } : null; };
       txt.replace(/\r/g, '').split('\n').forEach(l => {
         const x = gLimpa(l); if (!x || /^```/.test(x)) return;
         let m;
-        if (comMarcas && (m = x.match(/^ilustra[çc][ãa]o\s*:\s*(.*)$/i))){ alvo = 'ilustracao'; if (m[1]) out.ilustracao.push(m[1]); return; }
-        if (comMarcas && (m = x.match(/^aplica[çc][ãa]o\s*:\s*(.*)$/i))){ alvo = 'aplicacao'; if (m[1]) out.aplicacao.push(m[1]); return; }
-        if (comMarcas && (m = x.match(/^frase(?: de impacto)?\s*:\s*(.*)$/i))){ alvo = 'frase'; out.frase = m[1]; return; }
-        if (/^(t[íi]tulo|ponto \d|conclus[ãa]o|introdu[çc][ãa]o)\s*[:–-]?\s*$/i.test(x)) return;
-        if (alvo === 'frase') out.frase = (out.frase + ' ' + x).trim(); else out[alvo].push(x);
+        if (comMarcas && (m = marca(x, 'ilustra[çc][ãa]o'))){ alvo = 'ilustracao'; if (m.resto) out.ilustracao.push(m.resto); return; }
+        if (comMarcas && (m = marca(x, 'aplica[çc][ãa]o(?: pr[áa]tica)?'))){ alvo = 'aplicacao'; if (m.resto) out.aplicacao.push(m.resto); return; }
+        if (comMarcas && (m = marca(x, 'frase(?: de impacto)?'))){ alvo = m.resto ? 'depoisFrase' : 'frase'; out.frase = m.resto; return; }
+        if (/^(t[íi]tulo|ponto \d|conclus[ãa]o|introdu[çc][ãa]o|transi[çc][ãa]o)\s*[:–-]?\s*$/i.test(x)) return;
+        if (alvo === 'frase'){ out.frase = x; alvo = 'depoisFrase'; return; }
+        if (alvo === 'depoisFrase'){ out.aplicacao.push(x); return; }   // depois da frase: volta para a aplicação
+        out[alvo].push(x);
       });
       out.frase = out.frase.trim().replace(/^["“”']+|["“”']+$/g, '').trim();
-      const palavras = [...out.paragrafos, ...out.ilustracao, ...out.aplicacao].join(' ').split(/\s+/).length;
-      if (palavras < 50) throw new Error('a resposta da IA veio curta demais');
-      if (comMarcas && (!out.frase || !out.aplicacao.length)) throw new Error('a resposta veio sem a aplicação ou sem a frase de impacto');
+      if (comMarcas){
+        // a IA não separou ilustração e aplicação: divide ao meio
+        if (!out.aplicacao.length && out.ilustracao.length >= 2){ const k = Math.ceil(out.ilustracao.length / 2); out.aplicacao = out.ilustracao.splice(k); }
+        // sem a linha FRASE: usa a última frase da aplicação
+        if (!out.frase && out.aplicacao.length){ const ult = out.aplicacao[out.aplicacao.length - 1]; const fr = ult.match(/[^.!?]+[.!?]["”]?\s*$/); out.frase = (fr ? fr[0] : ult).trim().replace(/^["“”']+|["“”']+$/g, ''); }
+      }
+      const palavras = [...out.paragrafos, ...out.ilustracao, ...out.aplicacao].join(' ').split(/\s+/).filter(Boolean).length;
+      if (palavras < 50){ const e = new Error('a resposta da IA veio curta demais'); e.detalhe = txt.slice(0, 600); throw e; }
+      if (comMarcas && (!out.frase || !out.aplicacao.length)){ const e = new Error('a resposta veio sem a aplicação ou sem a frase de impacto'); e.detalhe = txt.slice(0, 600); throw e; }
       return out;
     } catch (e){ erro = e; }
   }
@@ -1121,7 +1141,7 @@ $('#gCultos').addEventListener('click', e => {
   const b = e.target.closest('.g-culto'); if (!b) return;
   const x = gCultos[+b.dataset.i];
   if (G && !confirm('Há uma geração em andamento. Trocar de culto descarta o que já foi gerado. Continuar?')) return;
-  G = null; gravarLS('atelie.gerando', null); gPassos(); gBotoes(false);
+  G = null; gravarLS('atelie.gerando', null); gPassos(); gBotoes(false); $('#gAoVivo').hidden = true;
   $('#gTema').value = x.tema || ''; $('#gRef').value = x.texto || ''; $('#gIdeia').value = x.descricao || '';
   $('#gCultos').dataset.culto = x.culto || '';
   document.querySelectorAll('.g-culto').forEach(k => k.classList.toggle('ativo', k === b));
@@ -1169,9 +1189,13 @@ async function gerarSermao(){
     const tema = $('#gTema').value.trim(), ref = $('#gRef').value.trim();
     if (!tema && !ref){ $('#gMsg').innerHTML = '<div class="erro">Escolha um culto ou preencha o tema e o texto.</div>'; return; }
     G = { domingo: $('#gDom').value, culto: +($('#gCultos').dataset.culto || 0) || null, tema, ref, ideia: $('#gIdeia').value.trim(),
-          tempo: +$('#gTempo').value || 40, publico: $('#gPublico').value.trim() || 'Congregação da Igreja Vidas, culto de domingo', pontos: [] };
+          tempo: +$('#gTempo').value || 40, publico: $('#gPublico').value.trim() || 'Congregação da Igreja Vidas, culto de domingo', pontos: [],
+          modo: (document.querySelector('input[name=gModo]:checked') || {}).value || 'linear' };
+    gravarLS('atelie.modoGer', G.modo);
     gGuardar();
   }
+  if (G.modo === 'linear') return gerarLinear();
+  $('#gAoVivo').hidden = true;
   gPassos(); gBotoes(true);
   if (G.intro) gPasso(0, 'feito');
   G.pontos.forEach((p, k) => { if (p && p.exegese) gPasso(1 + k, 'feito'); if (p && p.frase) gPasso(6 + k, 'feito'); });
@@ -1224,9 +1248,142 @@ Agora escreva, continuando naturalmente: a ILUSTRAÇÃO deste ponto (analogia pr
   } catch (e){
     const n = e.passo != null ? e.passo : passo;
     if (e.passo == null) gPasso(n, 'falhou');
-    $('#gMsg').innerHTML = `<div class="erro">Parou em “${esc(G_NOMES[n])}”: ${esc(e.message || e)}. O que já ficou pronto está guardado: toque em “Continuar a geração”.</div>`;
+    $('#gMsg').innerHTML = `<div class="erro">Parou em “${esc(G_NOMES[n])}”: ${esc(e.message || e)}. O que já ficou pronto está guardado: toque em “Continuar a geração”.</div>`
+      + (e.detalhe ? `<details style="margin-top:6px"><summary class="aviso">Ver o que a IA respondeu</summary><pre style="white-space:pre-wrap;font-size:12px;color:var(--mudo)">${esc(e.detalhe)}</pre></details>` : '');
   }
   gBotoes(false);
+}
+
+/* =====================================================================
+   7b. ESCRITA CONTÍNUA — o sermão inteiro numa resposta só, aparecendo na tela
+   enquanto a IA escreve (streaming). Se a conexão cair ou o texto for cortado,
+   pede para continuar de onde parou. O texto parcial fica salvo neste aparelho.
+   ===================================================================== */
+const L_FORMATO = `
+
+Escreva agora o sermão COMPLETO, do começo ao fim, numa única resposta contínua, com ritmo de pregação e progressão natural entre os pontos (cada ponto retoma o anterior). Use EXATAMENTE este formato, um parágrafo por linha, com os rótulos sozinhos na linha:
+
+TÍTULO DO SERMÃO (de 2 a 7 palavras)
+TEXTO: a referência bíblica
+Big Idea: a ideia central em uma frase
+INTRODUÇÃO
+(cerca de 150 palavras)
+1. TÍTULO FORTE DO PONTO
+Exegese
+(350 a 450 palavras: contexto histórico, palavras-chave no original explicadas de forma simples, significado teológico)
+Ilustração
+(120 a 200 palavras)
+Aplicação
+(180 a 260 palavras, direta e confrontadora)
+Frase de impacto
+(uma frase só)
+2. … (mesma estrutura até o ponto 4)
+CONCLUSÃO
+(cerca de 150 palavras, sem ideias novas)
+FIM
+
+Termine com a palavra FIM sozinha na última linha. Sem Markdown e sem comentários antes ou depois.`;
+
+/* lê um stream SSE da Anthropic (funciona também se o Worker devolver tudo de uma vez) */
+async function lStream(msgs, maxTokens, aoChegar){
+  const r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs, stream: true }) });
+  if (!r.ok || !r.body){
+    const b = await r.text().catch(() => ''); let m = 'o servidor da IA respondeu com erro ' + r.status;
+    try { const j = JSON.parse(b); m = typeof j.error === 'string' ? j.error : (j.error && j.error.message) || m; } catch {}
+    throw new Error(m);
+  }
+  const leitor = r.body.getReader(), dec = new TextDecoder();
+  let buf = '', stop = null, chegou = '';
+  const linha = l => {
+    l = l.trim();
+    if (l.startsWith('{') && !chegou){ // Worker antigo devolvendo erro em JSON
+      try { const j = JSON.parse(l); if (j.error) throw new Error(typeof j.error === 'string' ? j.error : j.error.message); } catch (e){ if (e instanceof SyntaxError) return; throw e; }
+    }
+    if (!l.startsWith('data:')) return;
+    let ev; try { ev = JSON.parse(l.slice(5)); } catch { return; }
+    if (ev.type === 'content_block_delta' && ev.delta && ev.delta.text){ chegou += ev.delta.text; aoChegar(ev.delta.text); }
+    else if (ev.type === 'message_delta' && ev.delta) stop = ev.delta.stop_reason || stop;
+    else if (ev.type === 'error') throw new Error((ev.error && ev.error.message) || 'erro da IA');
+  };
+  for (;;){
+    const { done, value } = await leitor.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let k; while ((k = buf.indexOf('\n')) >= 0){ linha(buf.slice(0, k)); buf = buf.slice(k + 1); }
+  }
+  if (buf) linha(buf);
+  return { stop, chegou };
+}
+
+const lCompleto = t => /(^|\n)\s*FIM\s*$/i.test(t.replace(/\*\*/g, '').trimEnd());
+function lMostrar(final){
+  const el = $('#gTextoVivo'), caixa = $('#gAoVivo');
+  const perto = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 60;
+  el.innerHTML = esc(G.texto.replace(/\n\s*FIM\s*$/i, '')) + (final ? '' : '<span class="cursor"></span>');
+  $('#gContador').textContent = G.texto.split(/\s+/).filter(Boolean).length + ' palavras' + (final ? '' : ' · escrevendo…');
+  if (perto) caixa.scrollTop = caixa.scrollHeight;
+}
+
+async function gerarLinear(){
+  $('#gPassos').innerHTML = ''; $('#gAoVivo').hidden = false; gBotoes(true);
+  $('#gMsg').innerHTML = `<div class="aviso">${G.texto ? 'Continuando de onde parou…' : 'Escrevendo o sermão… o texto vai aparecendo aqui embaixo.'}</div>`;
+  try {
+    if (G.memoria == null){ $('#gContador').textContent = 'Consultando a Memória…'; G.memoria = await gContextoMemoria(G.ref, G.tema); gGuardar(); }
+    G.texto = G.texto || ''; lMostrar(false);
+    const pedido = PROMPT_SERMAO + '\n\n---\n\n' + gDados() + (G.memoria ? '\n\n' + G.memoria : '') + L_FORMATO;
+    let ultimoSalvo = Date.now();
+    for (let volta = 0; volta < 6 && !lCompleto(G.texto); volta++){
+      const msgs = [{ role: 'user', content: pedido }];
+      if (G.texto.trim()) msgs.push({ role: 'assistant', content: G.texto.replace(/\s+$/, '') },
+        { role: 'user', content: 'A resposta foi cortada. Continue EXATAMENTE de onde parou, sem repetir nada e sem nenhum comentário, até a palavra FIM.' });
+      const juntar = G.texto && !/\s$/.test(G.texto);
+      let primeiro = true;
+      try {
+        await lStream(msgs, 16000, pedaco => {
+          if (primeiro && juntar && !/^\s/.test(pedaco) && /[.!?:"”)]$/.test(G.texto)) pedaco = '\n' + pedaco;
+          primeiro = false;
+          G.texto += pedaco; lMostrar(false);
+          if (Date.now() - ultimoSalvo > 1500){ gGuardar(); ultimoSalvo = Date.now(); }
+        });
+      } catch (e){
+        gGuardar();
+        if (volta >= 5 || !G.texto.trim()) throw e;   // nada chegou: erro de verdade
+        $('#gMsg').innerHTML = '<div class="aviso">A conexão caiu no meio; continuando de onde parou…</div>';
+        await new Promise(ok => setTimeout(ok, 2500));
+      }
+      gGuardar();
+    }
+    if (!lCompleto(G.texto)) throw new Error('o texto não chegou até o fim');
+    lMostrar(true);
+    lFinalizar();
+  } catch (e){
+    gGuardar(); lMostrar(true);
+    $('#gMsg').innerHTML = `<div class="erro">Parou: ${esc(e.message || e)}. O que já foi escrito está guardado: toque em “Continuar a geração”.</div>`;
+  }
+  gBotoes(false);
+}
+
+function lFinalizar(){
+  const linhas = G.texto.replace(/\r/g, '').split('\n').map(gLimpa).filter(Boolean)
+    .filter(l => !/^FIM$/i.test(l) && !/^```/.test(l));
+  // rótulos que a IA às vezes escreve com dois-pontos ou junto do texto
+  const norm = [];
+  for (const l of linhas){
+    const m = l.match(/^(exegese|ilustra[çc][ãa]o|aplica[çc][ãa]o(?: pr[áa]tica)?|frase de impacto|introdu[çc][ãa]o|conclus[ãa]o)\s*[:.\-–—]\s*(.+)$/i);
+    const mt = l.match(/^t[íi]tulo(?: do serm[ãa]o)?\s*:\s*(.+)$/i);
+    if (mt && !norm.length){ norm.push(mt[1]); continue; }
+    if (m){ norm.push(m[1].replace(/ pr[áa]tica/i, '')); norm.push(m[2]); } else norm.push(l.replace(/^(introdu[çc][ãa]o|conclus[ãa]o)\s*:?$/i, x => x.replace(':', '')));
+  }
+  const h = norm.map(t => `<p>${esc(t)}</p>`).join('');
+  const d = diagramar(h);
+  atual = { ...d, nome: 'Gerado no Canivete', data: G.domingo || proximoDomingoISO(), culto: G.culto, gerado: true };
+  gravarLS('atelie.rascunho', atual);
+  G = null; gravarLS('atelie.gerando', null);
+  $('#gAoVivo').hidden = true; $('#gMsg').innerHTML = '';
+  $('#msg').innerHTML = `<div class="aviso">Sermão gerado: “${esc(d.titulo)}” · ${esc(d.ref)}. Revise na folha; depois gere os slides, salve no KTL e envie ao Pregador.</div>`;
+  mostrar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /* monta o sermão no mesmo formato do DOCX da Adapta e passa pela diagramação de sempre */
@@ -1250,7 +1407,9 @@ function gFinalizar(){
 }
 
 $('#bGerarSermao').onclick = gerarSermao;
-$('#bGerarDescartar').onclick = () => { if (confirm('Descartar a geração em andamento?')){ G = null; gravarLS('atelie.gerando', null); $('#gPassos').innerHTML = ''; $('#gMsg').innerHTML = ''; gBotoes(false); } };
+{ const m = lerLS('atelie.modoGer', 'linear'); const r = document.querySelector(`input[name=gModo][value="${m}"]`); if (r) r.checked = true; }
+if (G && G.modo === 'linear' && G.texto){ $('#gAoVivo').hidden = false; lMostrar(true); }
+$('#bGerarDescartar').onclick = () => { if (confirm('Descartar a geração em andamento?')){ G = null; gravarLS('atelie.gerando', null); $('#gPassos').innerHTML = ''; $('#gMsg').innerHTML = ''; $('#gAoVivo').hidden = true; gBotoes(false); } };
 $('#gDom').addEventListener('change', gCarregarCultos);
 const gPesq = () => { $('#gPesq').innerHTML = barraPesquisa($('#gRef').value.trim(), 'Pesquisar o texto em'); };
 $('#gRef').addEventListener('input', gPesq);
