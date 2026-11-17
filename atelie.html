@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.14.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.14.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -247,7 +247,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.14.1';
+const VERSAO = '0.14.2';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -1287,6 +1287,7 @@ Termine com a palavra FIM sozinha na última linha. Sem Markdown e sem comentár
 /* lê um stream SSE da Anthropic (funciona também se o Worker devolver tudo de uma vez) */
 let lEtapa = '';
 function lStatus(t){ lEtapa = t; const el = $('#gContador'); if (el) el.textContent = t; }
+let lSemPensar = true;   // pede à IA para escrever direto, sem a fase de "raciocínio" (que levava minutos sem mostrar nada)
 async function lStream(msgs, maxTokens, aoChegar){
   const t0 = Date.now(), seg = () => Math.round((Date.now() - t0) / 1000);
   const ctrl = new AbortController();
@@ -1298,12 +1299,16 @@ async function lStream(msgs, maxTokens, aoChegar){
     } else if (fase === 'esperando'){
       lStatus(`Conectada. Esperando a IA começar a escrever… ${seg()} s`);
       if (Date.now() - ultimoByte > 150000) ctrl.abort('parada');
+    } else if (fase === 'pensando'){
+      lStatus(`A IA está planejando o sermão antes de escrever… ${seg()} s`);
+      if (Date.now() - ultimoByte > 150000) ctrl.abort('parada');
     } else if (Date.now() - ultimoByte > 150000) ctrl.abort('parada');
   }, 1000);
   let r;
   try {
     r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
-      body: JSON.stringify({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs, stream: true }) });
+      body: JSON.stringify(Object.assign({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs, stream: true },
+        lSemPensar ? { thinking: { type: 'disabled' } } : {})) });
   } catch (e){
     clearInterval(cronometro);
     throw new Error(ctrl.signal.aborted ? 'o Worker não respondeu em 7 minutos' : 'não consegui falar com o Worker (' + (e.message || e) + ')');
@@ -1313,15 +1318,17 @@ async function lStream(msgs, maxTokens, aoChegar){
     clearInterval(cronometro);
     const b = await r.text().catch(() => ''); let m = 'o servidor da IA respondeu com erro ' + r.status;
     try { const j = JSON.parse(b); m = typeof j.error === 'string' ? j.error : (j.error && j.error.message) || m; } catch {}
+    if (lSemPensar && r.status === 400 && /thinking/i.test(b)){ lSemPensar = false; return lStream(msgs, maxTokens, aoChegar); }
     const e = new Error(m); e.detalhe = b.slice(0, 800); throw e;
   }
   fase = 'esperando';
   const leitor = r.body.getReader(), dec = new TextDecoder();
-  let buf = '', stop = null, chegou = '', bruto = '', todo = '', ehJSON = null;
+  let buf = '', stop = null, chegou = '', bruto = '', todo = '', ehJSON = null, fim = '';
   const linha = l => {
     l = l.trim();
     if (!l.startsWith('data:')) return;
     let ev; try { ev = JSON.parse(l.slice(5)); } catch { return; }
+    if (ev.type === 'content_block_start' && ev.content_block && /thinking/.test(ev.content_block.type) && fase === 'esperando') fase = 'pensando';
     if (ev.type === 'content_block_delta' && ev.delta && typeof ev.delta.text === 'string'){ fase = 'escrevendo'; chegou += ev.delta.text; aoChegar(ev.delta.text); }
     else if (ev.type === 'message_delta' && ev.delta) stop = ev.delta.stop_reason || stop;
     else if (ev.type === 'error'){ const e = new Error((ev.error && ev.error.message) || 'erro da IA'); e.detalhe = bruto.slice(0, 800); throw e; }
@@ -1335,6 +1342,7 @@ async function lStream(msgs, maxTokens, aoChegar){
       if (ehJSON === null && pedaco.trim()) ehJSON = pedaco.trim().startsWith('{');
       if (ehJSON){ todo += pedaco; if (bruto.length < 4000) bruto += pedaco; continue; }
       if (bruto.length < 4000) bruto += pedaco;
+      fim = (fim + pedaco).slice(-1500);
       buf += pedaco;
       let k; while ((k = buf.indexOf('\n')) >= 0){ linha(buf.slice(0, k)); buf = buf.slice(k + 1); }
     }
@@ -1353,7 +1361,7 @@ async function lStream(msgs, maxTokens, aoChegar){
     } catch (e){ if (!(e instanceof SyntaxError)) throw e; }
   }
   gravarLS('atelie.ultimaIA', { quando: new Date().toISOString(), tipo, stop, segundos: seg(), bruto: bruto.slice(0, 3000) });
-  if (!chegou){ const e = new Error(`a IA não mandou nenhum texto (resposta de ${seg()} s, tipo ${tipo || '?'})`); e.detalhe = bruto.slice(0, 800) || '(resposta vazia)'; throw e; }
+  if (!chegou){ const e = new Error(`a IA não mandou nenhum texto (resposta de ${seg()} s, ${stop === 'max_tokens' ? 'o limite acabou antes de ela começar a escrever' : 'motivo do fim: ' + (stop || '?')})`); e.detalhe = bruto.slice(0, 600) + '\n…\n' + fim; throw e; }
   return { stop, chegou };
 }
 
@@ -1382,7 +1390,7 @@ async function gerarLinear(){
       const juntar = G.texto && !/\s$/.test(G.texto);
       let primeiro = true;
       try {
-        await lStream(msgs, 16000, pedaco => {
+        await lStream(msgs, 20000, pedaco => {
           if (primeiro && juntar && !/^\s/.test(pedaco) && /[.!?:"”)]$/.test(G.texto)) pedaco = '\n' + pedaco;
           primeiro = false;
           G.texto += pedaco; lMostrar(false);
