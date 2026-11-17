@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.14.3" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Estudo" data-versao="0.14.4" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -180,7 +180,7 @@ input[type=month],input[type=date],input[type=number],input[type=text],textarea{
    3. gera a versão dos adolescentes (RDA) a partir do estudo dos adultos
    4. revisa na folha (no formato do PDF das células), baixa PDF/DOCX e salva no KTL
    ===================================================================== */
-const VERSAO = '0.14.3';
+const VERSAO = '0.14.4';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -320,14 +320,15 @@ Sua tarefa é elaborar um Estudo Bíblico completo, profundamente bíblico, expo
 OBJETIVO DO ESTUDO — O Estudo DEVE: ser fiel ao texto bíblico; estar alinhado à teologia cristã (com coerência batista e pentecostal); ser claro, envolvente e acessível para pessoas leigas; ter progressão lógica clara (unidade, ordem, proporção e progresso); conduzir o ouvinte a transformação prática, não apenas informação.
 
 ESTRUTURA OBRIGATÓRIA
-INTRODUÇÃO — aproximadamente 150 palavras; criativa, envolvente e conectada com a vida real; pode usar metáfora, pergunta, contraste ou narrativa; apresentar o tema de forma natural; conduzir diretamente à ideia central; gerar interesse imediato.
-DESENVOLVIMENTO (3 PONTOS PRINCIPAIS) — cada ponto DEVE conter: aproximadamente entre 800 a 1000 palavras; título forte, claro e impactante; exegese completa (explicação do texto a que o ponto se refere); ilustração (analogia prática, história ou imagem mental clara, que facilite o entendimento do ponto); aplicação (direta, prática e confrontadora, voltada para a vida do ouvinte, levando à reflexão e mudança real); frase de impacto (uma frase forte, memorável e ensinável); transição (conectar naturalmente com o próximo ponto).
-CONCLUSÃO — aproximadamente 150 palavras; recapitular os pontos principais de forma progressiva; reforçar a ideia central; criar senso de urgência espiritual; NÃO introduzir novas ideias.
+INTRODUÇÃO — aproximadamente 100 palavras; criativa, envolvente e conectada com a vida real; pode usar metáfora, pergunta, contraste ou narrativa; apresentar o tema de forma natural; conduzir diretamente à ideia central; gerar interesse imediato.
+DESENVOLVIMENTO (3 PONTOS PRINCIPAIS) — cada ponto DEVE conter: aproximadamente 350 palavras; título forte, claro e impactante; exegese completa (explicação do texto a que o ponto se refere); ilustração (analogia prática, história ou imagem mental clara, que facilite o entendimento do ponto); aplicação (direta, prática e confrontadora, voltada para a vida do ouvinte, levando à reflexão e mudança real); frase de impacto (uma frase forte, memorável e ensinável); transição (conectar naturalmente com o próximo ponto).
+CONCLUSÃO — aproximadamente 80 palavras; recapitular os pontos principais de forma progressiva; reforçar a ideia central; criar senso de urgência espiritual; NÃO introduzir novas ideias.
 DESAFIO FINAL — chamado claro, direto e prático à ação.
 
 DIRETRIZES DE ESTILO: linguagem clara, acessível e pastoral; evitar termos excessivamente técnicos sem explicação; manter profundidade sem perder simplicidade; usar versículos de apoio quando necessário; criar conexão emocional e espiritual com o ouvinte; evitar superficialidade.
 DIFERENCIAIS OBRIGATÓRIOS: inserir frases de impacto ao longo do estudo; garantir transições naturais entre os pontos; garantir que o estudo seja totalmente ensinável (não apenas teórico); priorizar transformação espiritual acima de informação.
-FORMATO FINAL: escrita fluida, natural e com ritmo de pregação.`;
+FORMATO FINAL: escrita fluida, natural e com ritmo de pregação.
+TAMANHO TOTAL: cerca de 1400 palavras (umas 3 páginas). Seja enxuto: cada parágrafo precisa ter uma função.`;
 
 const REGRAS_SAIDA = `
 
@@ -344,7 +345,7 @@ Como deve ser a versão dos adolescentes:
 - Exemplos e ilustrações NOVOS, tirados do mundo deles: escola, provas, amizades, família, celular, redes sociais, vídeos, jogos, esportes, comparação, ansiedade, pressão do grupo.
 - Mantém a explicação do texto (o que Paulo, Jesus etc. quis dizer), mas de forma acessível.
 - Aplicações concretas para a semana deles.
-- Cada ponto tem aproximadamente 500 a 650 palavras.
+- Cada ponto tem aproximadamente 300 palavras; o estudo inteiro, cerca de 1400 palavras (umas 3 páginas).
 - No fim, um desafio com passos práticos numerados.`;
 
 /* pede à IA e devolve o texto bruto; se a resposta vier cortada pelo tamanho, pede a continuação */
@@ -481,7 +482,7 @@ async function gerarAdultos(){
       i = 0; passo(0, 'indo');
       const p0 = await pedirJSON(sis, dadosDoEstudo() + `
 
-Primeiro, planeje o estudo e escreva a INTRODUÇÃO. Formato:
+Primeiro, planeje o estudo e escreva a INTRODUÇÃO (cerca de 100 palavras). Formato:
 {"titulo": "título do estudo em MAIÚSCULAS, de 2 a 6 palavras",
  "big_idea": "a ideia central em uma frase",
  "pontos": [{"titulo": "TÍTULO FORTE DO PONTO – SUBTÍTULO", "foco": "que parte do texto o ponto explica e qual é a ênfase"}, {…}, {…}],
@@ -501,7 +502,7 @@ PLANO JÁ DEFINIDO:
 ${resumoPlano()}
 
 Escreva a PRIMEIRA METADE do PONTO ${k + 1}: "${pl.titulo}" (${pl.foco}).
-Esta metade é a EXEGESE: explicação do texto a que o ponto se refere (contexto, palavras importantes, sentido), entre 300 e 350 palavras. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.${k ? ' Comece retomando brevemente o ponto anterior ("' + est.plano[k - 1].titulo + '").' : ''}`, 1500, false);
+Esta metade é a EXEGESE: explicação do texto a que o ponto se refere (contexto, palavras importantes, sentido), entre 140 e 170 palavras. Ainda NÃO escreva ilustração, aplicação nem frase de impacto.${k ? ' Comece retomando brevemente o ponto anterior ("' + est.plano[k - 1].titulo + '").' : ''}`, 1500, false);
       pt.parte1 = lista(a.paragrafos);
     };
     const aplicacao = k => async () => {
@@ -513,7 +514,7 @@ ${resumoPlano()}
 
 PONTO ${k + 1}: "${pl.titulo}". A primeira metade (exegese) já está escrita e termina assim: "${pt.parte1.slice(-2).join(' ')}"
 
-Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (analogia, história ou imagem mental clara) e aplicação direta, prática e confrontadora, entre 300 e 400 palavras${k < 2 ? ', terminando com uma transição natural para o ponto ' + (k + 2) + ' ("' + est.plano[k + 1].titulo + '")' : ''}. Depois, a frase de impacto e as perguntas para discussão em grupo.`, 1700, true);
+Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (analogia, história ou imagem mental clara, curta) e aplicação direta, prática e confrontadora, entre 170 e 200 palavras no total${k < 2 ? ', terminando com uma transição natural para o ponto ' + (k + 2) + ' ("' + est.plano[k + 1].titulo + '")' : ''}. Depois, a frase de impacto e as perguntas para discussão em grupo.`, 1700, true);
       pt.paragrafos = [...pt.parte1, ...lista(b.paragrafos)];
       pt.frase = limparAspas(b.frase); pt.perguntas = String(b.perguntas || '').trim();
     };
@@ -523,7 +524,7 @@ Escreva a SEGUNDA METADE deste ponto, continuando naturalmente: ilustração (an
 PLANO JÁ DEFINIDO:
 ${resumoPlano()}
 
-Agora escreva a CONCLUSÃO (cerca de 150 palavras, recapitulando os 3 pontos, sem ideias novas), o DESAFIO FINAL (chamado claro, direto e prático, 2 a 3 parágrafos curtos) e uma ORAÇÃO FINAL (um parágrafo, terminando com "Amém.").
+Agora escreva a CONCLUSÃO (cerca de 80 palavras, recapitulando os 3 pontos, sem ideias novas), o DESAFIO FINAL (chamado claro, direto e prático, 1 ou 2 parágrafos curtos, até 60 palavras) e uma ORAÇÃO FINAL (um parágrafo curto, até 50 palavras, terminando com "Amém.").
 Formato:
 {"conclusao": ["parágrafo", "…"],
  "desafio": ["parágrafo", "…"],
@@ -575,7 +576,7 @@ async function gerarAdolescentes(){
     passo(0, 'indo');
     const p0 = await pedirJSON(sis, base + `\n\nINTRODUÇÃO DOS ADULTOS:\n${A.intro.join('\n')}
 
-Adapte para os adolescentes: os títulos dos 3 pontos (mais diretos, de preferência com um verbo, no formato "TÍTULO – SUBTÍTULO") e a INTRODUÇÃO (cerca de 180 palavras, começando com uma situação do dia a dia deles).
+Adapte para os adolescentes: os títulos dos 3 pontos (mais diretos, de preferência com um verbo, no formato "TÍTULO – SUBTÍTULO") e a INTRODUÇÃO (cerca de 100 palavras, começando com uma situação do dia a dia deles).
 Formato:
 {"pontos": ["TÍTULO 1 – SUBTÍTULO", "TÍTULO 2 – SUBTÍTULO", "TÍTULO 3 – SUBTÍTULO"],
  "introducao": ["parágrafo", "…"]}`, 1400);
@@ -589,7 +590,7 @@ Formato:
       const pa = A.pontos[k];
       const r = await pedirTexto(sis, base + `\n\nPONTO ${k + 1} DOS ADULTOS: ${pa.titulo}\n${pa.paragrafos.join('\n')}
 
-Adapte para os adolescentes a PRIMEIRA METADE do ponto ${k + 1}, "${titulos[k] || pa.titulo}": a explicação do texto bíblico, em linguagem deles, e uma ilustração nova do mundo deles (escola, celular, amizades, esportes…). Entre 250 e 300 palavras. Ainda NÃO escreva a aplicação, a frase de impacto nem as perguntas.`, 1400, false);
+Adapte para os adolescentes a PRIMEIRA METADE do ponto ${k + 1}, "${titulos[k] || pa.titulo}": a explicação do texto bíblico, em linguagem deles, e uma ilustração nova e curta do mundo deles (escola, celular, amizades, esportes…). Entre 130 e 160 palavras. Ainda NÃO escreva a aplicação, a frase de impacto nem as perguntas.`, 1400, false);
       T.pontos[k] = { titulo: String(titulos[k] || pa.titulo).toUpperCase(), parte1: r.paragrafos };
     };
     const metade2 = k => async () => {
@@ -597,14 +598,14 @@ Adapte para os adolescentes a PRIMEIRA METADE do ponto ${k + 1}, "${titulos[k] |
       const r = await pedirTexto(sis, base + `\n\nPONTO ${k + 1} DOS ADOLESCENTES: "${pt.titulo}". A primeira metade (explicação e ilustração) já está escrita e termina assim: "${pt.parte1.slice(-2).join(' ')}"
 Aplicação do ponto no estudo dos adultos (só como referência): ${pa.paragrafos.slice(-3).join(' ')}
 
-Escreva a SEGUNDA METADE deste ponto para os adolescentes: a aplicação prática para a semana deles, entre 150 e 220 palavras. Depois, uma frase de impacto nova, curta e memorável, e uma ou duas perguntas para o grupo de adolescentes.`, 1200, true);
+Escreva a SEGUNDA METADE deste ponto para os adolescentes: a aplicação prática para a semana deles, entre 100 e 130 palavras. Depois, uma frase de impacto nova, curta e memorável, e uma ou duas perguntas para o grupo de adolescentes.`, 1200, true);
       pt.paragrafos = [...pt.parte1, ...r.paragrafos]; pt.frase = r.frase; pt.perguntas = r.perguntas;
     };
     const final = async () => {
       const pf = await pedirJSON(sis, base + `\n\nCONCLUSÃO DOS ADULTOS:\n${A.conclusao.join('\n')}\nDESAFIO DOS ADULTOS:\n${A.desafio.abertura.join('\n')}
 Pontos dos adolescentes: ${titulos.join(' | ')}
 
-Escreva para os adolescentes: a CONCLUSÃO (cerca de 120 palavras, terminando com uma frase de impacto), o DESAFIO FINAL E CHAMADO À AÇÃO (uma frase de abertura, 3 ou 4 passos práticos numerados para a semana, cada um com um rótulo curto e uma explicação, e um fechamento curto) e a ORAÇÃO FINAL (1 ou 2 parágrafos, terminando com "Em nome de Jesus. Amém.").
+Escreva para os adolescentes: a CONCLUSÃO (cerca de 80 palavras, terminando com uma frase de impacto), o DESAFIO FINAL E CHAMADO À AÇÃO (uma frase de abertura, 3 passos práticos numerados para a semana, cada um com um rótulo curto e uma explicação de uma frase, e um fechamento de uma frase) e a ORAÇÃO FINAL (um parágrafo curto, até 50 palavras, terminando com "Em nome de Jesus. Amém.").
 Formato:
 {"conclusao": ["parágrafo", "…"],
  "conclusao_frase": "frase de impacto, sem aspas",
