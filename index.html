@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Canivete" data-versao="0.14.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Canivete" data-versao="0.14.3" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -207,7 +207,7 @@ nav.comodos svg{color:var(--ouro)}
    Só lê os outros apps: para editar, os botões abrem o app de origem.
    Precisa do canivete_hoje.sql rodado no Supabase.
    ===================================================================== */
-const VERSAO = '0.14.2';
+const VERSAO = '0.14.3';
 const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
 const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const WORKER_IA = 'https://promptflow-ia.eneaspr.workers.dev';
@@ -752,7 +752,7 @@ async function pedirSugestoes(){
     'Responda SOMENTE com um array JSON de 3 strings, sem nenhum texto antes ou depois.';
   try {
     const r = await fetch(WORKER_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 600, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n' + pedido }] }) });
+      body: JSON.stringify({ model: 'claude-sonnet-5-5', thinking: { type: 'between_tools' }, max_tokens: 600, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n' + pedido }] }) });
     const j = await r.json();
     if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('HTTP ' + r.status));
     const txt = (j.content || []).map(p => p.text || '').join('');

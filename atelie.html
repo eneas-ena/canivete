@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.14.2" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.14.3" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -247,7 +247,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.14.2';
+const VERSAO = '0.14.3';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -651,7 +651,7 @@ Responda SOMENTE com um objeto JSON, sem texto antes ou depois:
  "conclusao": {"rotulo": "2 a 3 palavras em MAIÚSCULAS", "linhas": [["Verbo ou palavra-chave", "complemento curto, até 6 palavras"], ...] (3 a 5 linhas que resumem o movimento do sermão)}}`;
   const sistema = 'Você ajuda um bispo a montar os slides do sermão dele. Seja fiel ao texto do sermão; não invente conteúdo novo. Português do Brasil.';
   const r = await fetch('https://promptflow-ia.eneaspr.workers.dev', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 900, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n' + pedido }] }) });
+    body: JSON.stringify({ model: 'claude-sonnet-5-5', thinking: { type: 'between_tools' }, max_tokens: 900, system: sistema, messages: [{ role: 'user', content: sistema + '\n\n' + pedido }] }) });
   const j = await r.json();
   if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('HTTP ' + r.status));
   const txt = (j.content || []).map(c => c.text || '').join('');
@@ -1025,7 +1025,7 @@ async function gBruto(pedido, maxTokens, completa){
   for (let volta = 0; volta < 5; volta++){
     const msgs = [{ role: 'user', content: PROMPT_SERMAO + '\n\n---\n\n' + pedido }];
     if (txt) msgs.push({ role: 'assistant', content: txt.replace(/\s+$/, '') }, { role: 'user', content: 'A resposta foi cortada. Continue EXATAMENTE de onde parou, sem repetir nada e sem nenhum comentário.' });
-    const r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs }) });
+    const r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: G_MODELO, thinking: { type: 'between_tools' }, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs }) });
     const bruto = await r.text();
     let j; try { j = JSON.parse(bruto); } catch { throw new Error(r.ok ? 'o servidor da IA devolveu uma resposta vazia' : 'o servidor da IA respondeu com erro ' + r.status); }
     if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : (j.error && j.error.message) || ('erro ' + r.status));
@@ -1287,7 +1287,9 @@ Termine com a palavra FIM sozinha na última linha. Sem Markdown e sem comentár
 /* lê um stream SSE da Anthropic (funciona também se o Worker devolver tudo de uma vez) */
 let lEtapa = '';
 function lStatus(t){ lEtapa = t; const el = $('#gContador'); if (el) el.textContent = t; }
-let lSemPensar = true;   // pede à IA para escrever direto, sem a fase de "raciocínio" (que levava minutos sem mostrar nada)
+/* O Sonnet 5.5 "pensa" antes de escrever, a não ser que se peça o contrário. Para ele, o jeito oficial de
+   desligar é thinking: {type: 'between_tools'} ('disabled' dá erro 400). Se não for aceito, pensa pouco (effort low). */
+let lSemPensar = true;
 async function lStream(msgs, maxTokens, aoChegar){
   const t0 = Date.now(), seg = () => Math.round((Date.now() - t0) / 1000);
   const ctrl = new AbortController();
@@ -1308,7 +1310,7 @@ async function lStream(msgs, maxTokens, aoChegar){
   try {
     r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
       body: JSON.stringify(Object.assign({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs, stream: true },
-        lSemPensar ? { thinking: { type: 'disabled' } } : {})) });
+        lSemPensar ? { thinking: { type: 'between_tools' } } : { output_config: { effort: 'low' } })) });
   } catch (e){
     clearInterval(cronometro);
     throw new Error(ctrl.signal.aborted ? 'o Worker não respondeu em 7 minutos' : 'não consegui falar com o Worker (' + (e.message || e) + ')');
