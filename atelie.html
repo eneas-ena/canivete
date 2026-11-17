@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.14.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Ateliê do Sermão" data-versao="0.14.1" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <script src="mammoth.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -247,7 +247,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
    · Saem: Big Idea, "Desenvolvimento", rótulos, transições, Desafio Final, Apelo, Resumindo
    · Itálico (palavras gregas) e negrito do original são mantidos
    ===================================================================== */
-const VERSAO = '0.14.0';
+const VERSAO = '0.14.1';
 const BRONZE = 'AB7942';
 
 const $ = s => document.querySelector(s);
@@ -1285,34 +1285,75 @@ FIM
 Termine com a palavra FIM sozinha na última linha. Sem Markdown e sem comentários antes ou depois.`;
 
 /* lê um stream SSE da Anthropic (funciona também se o Worker devolver tudo de uma vez) */
+let lEtapa = '';
+function lStatus(t){ lEtapa = t; const el = $('#gContador'); if (el) el.textContent = t; }
 async function lStream(msgs, maxTokens, aoChegar){
-  const r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs, stream: true }) });
+  const t0 = Date.now(), seg = () => Math.round((Date.now() - t0) / 1000);
+  const ctrl = new AbortController();
+  let fase = 'conectando', ultimoByte = Date.now(), cronometro;
+  cronometro = setInterval(() => {
+    if (fase === 'conectando'){
+      lStatus(seg() < 25 ? `Conectando à IA… ${seg()} s` : `Ainda sem resposta do Worker… ${seg()} s (se o Worker v3 não foi publicado, o texto só aparece no final)`);
+      if (seg() > 420) ctrl.abort('sem-resposta');
+    } else if (fase === 'esperando'){
+      lStatus(`Conectada. Esperando a IA começar a escrever… ${seg()} s`);
+      if (Date.now() - ultimoByte > 150000) ctrl.abort('parada');
+    } else if (Date.now() - ultimoByte > 150000) ctrl.abort('parada');
+  }, 1000);
+  let r;
+  try {
+    r = await fetch(G_IA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
+      body: JSON.stringify({ model: G_MODELO, max_tokens: maxTokens, system: PROMPT_SERMAO, messages: msgs, stream: true }) });
+  } catch (e){
+    clearInterval(cronometro);
+    throw new Error(ctrl.signal.aborted ? 'o Worker não respondeu em 7 minutos' : 'não consegui falar com o Worker (' + (e.message || e) + ')');
+  }
+  const tipo = r.headers.get('content-type') || '';
   if (!r.ok || !r.body){
+    clearInterval(cronometro);
     const b = await r.text().catch(() => ''); let m = 'o servidor da IA respondeu com erro ' + r.status;
     try { const j = JSON.parse(b); m = typeof j.error === 'string' ? j.error : (j.error && j.error.message) || m; } catch {}
-    throw new Error(m);
+    const e = new Error(m); e.detalhe = b.slice(0, 800); throw e;
   }
+  fase = 'esperando';
   const leitor = r.body.getReader(), dec = new TextDecoder();
-  let buf = '', stop = null, chegou = '';
+  let buf = '', stop = null, chegou = '', bruto = '', todo = '', ehJSON = null;
   const linha = l => {
     l = l.trim();
-    if (l.startsWith('{') && !chegou){ // Worker antigo devolvendo erro em JSON
-      try { const j = JSON.parse(l); if (j.error) throw new Error(typeof j.error === 'string' ? j.error : j.error.message); } catch (e){ if (e instanceof SyntaxError) return; throw e; }
-    }
     if (!l.startsWith('data:')) return;
     let ev; try { ev = JSON.parse(l.slice(5)); } catch { return; }
-    if (ev.type === 'content_block_delta' && ev.delta && ev.delta.text){ chegou += ev.delta.text; aoChegar(ev.delta.text); }
+    if (ev.type === 'content_block_delta' && ev.delta && typeof ev.delta.text === 'string'){ fase = 'escrevendo'; chegou += ev.delta.text; aoChegar(ev.delta.text); }
     else if (ev.type === 'message_delta' && ev.delta) stop = ev.delta.stop_reason || stop;
-    else if (ev.type === 'error') throw new Error((ev.error && ev.error.message) || 'erro da IA');
+    else if (ev.type === 'error'){ const e = new Error((ev.error && ev.error.message) || 'erro da IA'); e.detalhe = bruto.slice(0, 800); throw e; }
   };
-  for (;;){
-    const { done, value } = await leitor.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let k; while ((k = buf.indexOf('\n')) >= 0){ linha(buf.slice(0, k)); buf = buf.slice(k + 1); }
+  try {
+    for (;;){
+      const { done, value } = await leitor.read();
+      if (done) break;
+      ultimoByte = Date.now();
+      const pedaco = dec.decode(value, { stream: true });
+      if (ehJSON === null && pedaco.trim()) ehJSON = pedaco.trim().startsWith('{');
+      if (ehJSON){ todo += pedaco; if (bruto.length < 4000) bruto += pedaco; continue; }
+      if (bruto.length < 4000) bruto += pedaco;
+      buf += pedaco;
+      let k; while ((k = buf.indexOf('\n')) >= 0){ linha(buf.slice(0, k)); buf = buf.slice(k + 1); }
+    }
+    if (buf) linha(buf);
+  } catch (e){
+    if (ctrl.signal.aborted){ const x = new Error('a IA parou de mandar texto por mais de 2 minutos'); x.detalhe = bruto.slice(0, 800); throw x; }
+    throw e;
+  } finally { clearInterval(cronometro); }
+  // Worker antigo: veio um JSON comum, sem streaming
+  if (ehJSON){
+    try {
+      const j = JSON.parse(todo);
+      if (j.error){ const e = new Error(typeof j.error === 'string' ? j.error : j.error.message); e.detalhe = bruto.slice(0, 800); throw e; }
+      chegou = (j.content || []).map(c => c.text || '').join(''); stop = j.stop_reason;
+      if (chegou) aoChegar(chegou);
+    } catch (e){ if (!(e instanceof SyntaxError)) throw e; }
   }
-  if (buf) linha(buf);
+  gravarLS('atelie.ultimaIA', { quando: new Date().toISOString(), tipo, stop, segundos: seg(), bruto: bruto.slice(0, 3000) });
+  if (!chegou){ const e = new Error(`a IA não mandou nenhum texto (resposta de ${seg()} s, tipo ${tipo || '?'})`); e.detalhe = bruto.slice(0, 800) || '(resposta vazia)'; throw e; }
   return { stop, chegou };
 }
 
@@ -1321,7 +1362,8 @@ function lMostrar(final){
   const el = $('#gTextoVivo'), caixa = $('#gAoVivo');
   const perto = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 60;
   el.innerHTML = esc(G.texto.replace(/\n\s*FIM\s*$/i, '')) + (final ? '' : '<span class="cursor"></span>');
-  $('#gContador').textContent = G.texto.split(/\s+/).filter(Boolean).length + ' palavras' + (final ? '' : ' · escrevendo…');
+  const n = G.texto.split(/\s+/).filter(Boolean).length;
+  if (n || final) $('#gContador').textContent = n + ' palavras' + (final ? '' : ' · escrevendo…');
   if (perto) caixa.scrollTop = caixa.scrollHeight;
 }
 
@@ -1348,7 +1390,7 @@ async function gerarLinear(){
         });
       } catch (e){
         gGuardar();
-        if (volta >= 5 || !G.texto.trim()) throw e;   // nada chegou: erro de verdade
+        if (volta >= 5 || !G.texto.trim() || e.detalhe) throw e;   // nada chegou ou erro do servidor: mostra
         $('#gMsg').innerHTML = '<div class="aviso">A conexão caiu no meio; continuando de onde parou…</div>';
         await new Promise(ok => setTimeout(ok, 2500));
       }
@@ -1359,7 +1401,8 @@ async function gerarLinear(){
     lFinalizar();
   } catch (e){
     gGuardar(); lMostrar(true);
-    $('#gMsg').innerHTML = `<div class="erro">Parou: ${esc(e.message || e)}. O que já foi escrito está guardado: toque em “Continuar a geração”.</div>`;
+    $('#gMsg').innerHTML = `<div class="erro">Parou: ${esc(e.message || e)}. O que já foi escrito está guardado: toque em “Continuar a geração”.</div>`
+      + (e.detalhe ? `<details style="margin-top:6px"><summary class="aviso">Ver o que chegou do servidor</summary><pre style="white-space:pre-wrap;font-size:12px;color:var(--mudo)">${esc(e.detalhe)}</pre></details>` : '');
   }
   gBotoes(false);
 }
