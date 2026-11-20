@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <script src="pesquisa.js"></script>
-<script src="porteiro.js" data-app="Comparar versões" data-versao="0.15.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
+<script src="porteiro.js" data-app="Comparar versões" data-versao="0.16.0" data-protege="https://promptflow-ia.eneaspr.workers.dev"></script>
 <script src="../pregador-visual/fflate.min.js"></script>
 <script src="../pregador-visual/biblia.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,6 +68,30 @@ table.grade{border-collapse:separate;border-spacing:0;width:100%;min-width:var(-
 .grade mark{background:var(--dif);color:inherit;border-radius:3px;padding:0 1px}
 .grade tr:last-child td{border-bottom:none}
 .vazio-geral{padding:28px 18px;text-align:center}
+/* A Mensagem: uma célula só, ao lado de todos os versículos */
+.grade th.msg{color:var(--ouroTexto)}
+.grade td.msg{vertical-align:top;min-width:300px;background:var(--cartao2);border-left:1px solid var(--borda)}
+.msg-fixo{position:sticky;top:64px}
+.msg-bloco + .msg-bloco{margin-top:16px;padding-top:12px;border-top:1px dashed var(--borda)}
+.msg-ref{font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--ouroTexto);margin-bottom:4px}
+.msg-nota{font-size:12px;color:var(--mudo);margin-bottom:6px;font-style:italic}
+.msg-texto{white-space:pre-wrap}
+.msg-botoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.btn.peq{min-height:34px;padding:0 12px;font-size:13px}
+.btn.perigo{color:var(--perigo)}
+.chip.msgchip.sel{border-color:var(--ouro);background:var(--realce)}
+dialog{border:1px solid var(--borda);border-radius:16px;background:var(--cartao);color:var(--texto);padding:18px;width:min(640px,94vw)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog h3{margin:0 0 10px;font-family:Cinzel,serif;font-size:14px;letter-spacing:2px;color:var(--ouroTexto)}
+dialog textarea{width:100%;min-height:260px;color:var(--texto);background:var(--cartao2);border:1px solid var(--borda);border-radius:10px;padding:10px 12px;font-size:16px;line-height:1.55;resize:vertical}
+dialog input[type=text]{width:100%}
+dialog label{display:block;font-size:13px;color:var(--mudo);margin:8px 0 4px}
+.lista-msg{list-style:none;margin:8px 0 0;padding:0}
+.lista-msg li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--borda)}
+.lista-msg li:first-child{border-top:none}
+.lista-msg .r{font-weight:600;min-width:120px}
+.lista-msg .p{flex:1;min-width:160px;color:var(--mudo);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+summary{cursor:pointer}
 #ia{white-space:normal;line-height:1.65;font-size:16px}
 #ia h3{font-family:Cinzel,serif;font-size:13px;letter-spacing:1.5px;color:var(--ouroTexto);margin:16px 0 4px}
 #ia p{margin:6px 0}
@@ -119,6 +143,29 @@ table.grade{border-collapse:separate;border-spacing:0;width:100%;min-width:var(-
     <div id="ia"></div>
   </div>
 
+  <div class="cartao" id="cMensagem">
+    <details id="dMensagem">
+      <summary><h2 style="display:inline">MEUS TEXTOS DE A MENSAGEM</h2> <span class="aviso" id="msgConta"></span></summary>
+      <p class="aviso">Trechos que você digitou ou colou da sua Bíblia impressa. Ficam guardados na sua conta, só para você.</p>
+      <ul class="lista-msg" id="listaMsg"></ul>
+    </details>
+  </div>
+
+  <dialog id="dlgMsg">
+    <form method="dialog" id="fMsg">
+      <h3 id="dlgTitulo">A MENSAGEM</h3>
+      <label for="mRef">Referência (para guardar um capítulo inteiro, escreva só o capítulo, ex.: Sl 23)</label>
+      <input type="text" id="mRef" autocomplete="off">
+      <label for="mTexto">Texto (digite ou cole da sua Bíblia impressa)</label>
+      <textarea id="mTexto"></textarea>
+      <p class="erro" id="mErro" aria-live="polite"></p>
+      <div class="linha" style="justify-content:flex-end">
+        <button class="btn" type="button" id="mCancelar">Cancelar</button>
+        <button class="btn ouro" type="submit" id="mSalvar">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="cartao" id="cImportar">
     <h2>BÍBLIAS NESTE APARELHO</h2>
     <p class="aviso" id="listaBib"></p>
@@ -128,7 +175,9 @@ table.grade{border-collapse:separate;border-spacing:0;width:100%;min-width:var(-
 </div>
 
 <script>
-const VERSAO = '0.15.0';
+const VERSAO = '0.16.0';
+const SUPA_URL = 'https://ghjbljypxksubmcsvaig.supabase.co';
+const SUPA_KEY = 'sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby';
 const IA_URL = 'https://promptflow-ia.eneaspr.workers.dev';
 const IA_MODELO = 'claude-sonnet-5-5';
 const $ = s => document.querySelector(s);
@@ -164,7 +213,7 @@ const semAc = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCas
 /* abreviações comuns, além dos nomes por extenso que o Pregador já entende */
 const ABREV = { gen:'gn', gn:'gn', ex:'ex', exo:'ex', lv:'lv', lev:'lv', nm:'nm', num:'nm', dt:'dt', deut:'dt', js:'js', jos:'js', jz:'jz', jui:'jz', rt:'rt',
   '1sm':'1sm', '2sm':'2sm', '1sam':'1sm', '2sam':'2sm', '1rs':'1rs', '2rs':'2rs', '1cr':'1cr', '2cr':'2cr', ed:'ed', esd:'ed', ne:'ne', nee:'ne', et:'et', est:'et',
-  jo_:'jb', job:'jb', sl:'sl', sal:'sl', salmo:'sl', pv:'pv', prov:'pv', ec:'ec', ecl:'ec', ct:'ct', cant:'ct', is:'is', isa:'is', jr:'jr', jer:'jr', lm:'lm', lam:'lm',
+  jo:'jo', job:'jb', sl:'sl', sal:'sl', salmo:'sl', pv:'pv', prov:'pv', ec:'ec', ecl:'ec', ct:'ct', cant:'ct', is:'is', isa:'is', jr:'jr', jer:'jr', lm:'lm', lam:'lm',
   ez:'ez', eze:'ez', dn:'dn', dan:'dn', os:'os', jl:'jl', am:'am', ob:'ob', jn:'jn', jon:'jn', mq:'mq', miq:'mq', na:'na', hc:'hc', hab:'hc', sf:'sf', sof:'sf', ag:'ag', zc:'zc', zac:'zc', ml:'ml', mal:'ml',
   mt:'mt', mat:'mt', mc:'mc', mar:'mc', lc:'lc', luc:'lc', joa:'jo', at:'at', rm:'rm', rom:'rm', '1co':'1co', '2co':'2co', '1cor':'1co', '2cor':'2co', gl:'gl', gal:'gl',
   ef:'ef', efe:'ef', fp:'fp', fil:'fp', cl:'cl', col:'cl', '1ts':'1ts', '2ts':'2ts', '1tes':'1ts', '2tes':'2ts', '1tm':'1tm', '2tm':'2tm', '1tim':'1tm', '2tim':'2tm',
@@ -236,7 +285,9 @@ function pintarVersoes(){
       const sel = escolha.outras.includes(b.sigla);
       return `<button type="button" class="chip${sel ? ' sel' : ''}" data-sigla="${esc(b.sigla)}" title="${esc(titulo(b.sigla))}" aria-pressed="${sel}" ${!sel && cheio ? 'disabled' : ''}>${esc(b.sigla)}</button>`;
     }).join('')}
-    <span class="aviso">até ${MAX_COMP}</span></div>`;
+    <span class="aviso">até ${MAX_COMP}</span>
+    <button type="button" class="chip msgchip${escolha.mensagem !== false ? ' sel' : ''}" id="chipMsg" aria-pressed="${escolha.mensagem !== false}" title="Eugene Peterson · texto incluído por você">A Mensagem</button></div>`;
+  $('#chipMsg').onclick = () => { escolha.mensagem = escolha.mensagem === false; gravarLS('canivete.comparar', escolha); pintarVersoes(); mostrar(false); };
   $('#sPrincipal').onchange = e => { escolha.principal = e.target.value; escolha.outras = escolha.outras.filter(s => s !== escolha.principal); gravarLS('canivete.comparar', escolha); pintarVersoes(); mostrar(); };
   document.querySelectorAll('.chip[data-sigla]').forEach(b => b.onclick = () => {
     const s = b.dataset.sigla;
@@ -305,9 +356,14 @@ async function mostrar(rolar){
     }).join('');
     linhas += `<tr id="v${v}" class="${naRef && !soRef ? 'ref' : ''}"><td class="num">${v}</td>${cols}</tr>`;
   }
-  const largura = 60 + versoes.length * 240;
+  const comMsg = escolha.mensagem !== false;
+  if (comMsg){
+    const nLinhas = fim - ini + 1;
+    linhas = linhas.replace('</tr>', `<td class="msg" rowspan="${nLinhas}" id="tdMsg"><div class="msg-fixo">${htmlMensagem()}</div></td></tr>`);
+  }
+  const largura = 60 + versoes.length * 240 + (comMsg ? 300 : 0);
   area.innerHTML = `<div class="grade-caixa" id="caixa"><table class="grade" style="--largura:${largura}px">
-    <thead><tr><th class="num">v.</th>${versoes.map((s, i) => `<th scope="col">${esc(s)}${i === 0 ? ' · principal' : ''}<small>${esc(titulo(s))}</small></th>`).join('')}</tr></thead>
+    <thead><tr><th class="num">v.</th>${versoes.map((s, i) => `<th scope="col">${esc(s)}${i === 0 ? ' · principal' : ''}<small>${esc(titulo(s))}</small></th>`).join('')}${comMsg ? '<th scope="col" class="msg">A MENSAGEM<small>Eugene Peterson · texto incluído por você</small></th>' : ''}</tr></thead>
     <tbody>${linhas}</tbody></table></div>
     <div class="linha" style="margin-top:12px">
       ${atual.v1 && versoes.length > 1 ? '<button class="btn ouro" type="button" id="bIA">Análise comparativa com IA</button>' : ''}
@@ -321,6 +377,160 @@ async function mostrar(rolar){
     if (alvo) caixa.scrollTop = alvo.offsetTop - caixa.querySelector('thead').offsetHeight - 8;
   }
 }
+
+/* =====================================================================
+   3b. A MENSAGEM — texto digitado pelo Bispo, guardado no Supabase
+   (nada é buscado na internet; só o que ele incluir)
+   ===================================================================== */
+let sb = null;
+function cliente(){ if (sb) return sb; if (!window.supabase) return null; sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { storageKey: 'bispo-auth', persistSession: true, autoRefreshToken: true } }); return sb; }
+async function clienteLogado(){
+  const t0 = Date.now(); let c = cliente();
+  while (!c && Date.now() - t0 < 10000){ await new Promise(ok => setTimeout(ok, 150)); c = cliente(); }
+  if (!c) throw new Error('não consegui carregar a conexão. Verifique a internet.');
+  const s = await c.auth.getSession();
+  if (s.data && s.data.session) return c;
+  await new Promise(ok => window.addEventListener('porteiro:entrou', ok, { once: true }));
+  return c;
+}
+const faltaTabela = e => /canivete_mensagem|does not exist|schema cache/i.test((e && e.message) || '');
+let MSGS = null, msgErro = '';   // null = carregando
+/* referência curta para o "Copiar": Jo 3.16 · 1Co 13.4-7 · Sl 23 */
+const ABREV_TELA = { jb: 'Jó', ct: 'Ct' };
+const curta = e => {
+  const a = ABREV_TELA[e.livro] || e.livro.replace(/^(\d?)([a-z])/, (m, n, l) => n + l.toUpperCase());
+  return `${a} ${e.cap}${e.v1 ? '.' + e.v1 + (e.v2 > e.v1 ? '-' + e.v2 : '') : ''}`;
+};
+const refDe = e => textoRef({ id: e.livro, cap: e.cap, v1: e.v1, v2: e.v2 });
+const ordem = e => POR_ID[e.livro].i * 1e6 + e.cap * 1e3 + e.v1;
+async function carregarMensagem(){
+  try {
+    const c = await clienteLogado();
+    const r = await c.from('canivete_mensagem').select('id,livro,cap,v1,v2,referencia,texto,atualizado');
+    if (r.error) throw r.error;
+    MSGS = (r.data || []).filter(e => POR_ID[e.livro]).sort((a, b) => ordem(a) - ordem(b)); msgErro = '';
+  } catch (e){
+    MSGS = []; msgErro = faltaTabela(e) ? 'Falta criar a tabela no Supabase (rode o SQL canivete_mensagem.sql).' : 'Não consegui ler os textos: ' + (e.message || e);
+  }
+  pintarListaMsg();
+  if (atual && $('#tdMsg')) $('#tdMsg').firstElementChild.innerHTML = htmlMensagem(), ligarMensagem();
+}
+/* o que mostrar para a referência aberta */
+function textosDaRef(r){
+  if (!MSGS) return { lista: [], nota: '' };
+  const doCap = MSGS.filter(e => e.livro === r.id && e.cap === r.cap);
+  if (!r.v1){
+    const inteiro = doCap.find(e => !e.v1);
+    if (inteiro) return { lista: [inteiro], nota: '' };
+    return { lista: doCap, nota: doCap.length ? 'Trechos salvos deste capítulo.' : '' };
+  }
+  const exato = doCap.find(e => e.v1 === r.v1 && e.v2 === r.v2);
+  if (exato) return { lista: [exato], nota: '' };
+  const contem = doCap.filter(e => !e.v1 || (e.v1 <= r.v1 && e.v2 >= r.v2))
+    .sort((a, b) => ((a.v1 ? a.v2 - a.v1 : 999) - (b.v1 ? b.v2 - b.v1 : 999)));
+  if (contem.length){
+    const e = contem[0];
+    return { lista: [e], nota: `Você não salvou ${curta({ livro: r.id, cap: r.cap, v1: r.v1, v2: r.v2 })} separado. Mostrando o texto salvo de ${curta(e)}${e.v1 ? '' : ' (capítulo inteiro)'}, que contém o que você pediu.` };
+  }
+  const parte = doCap.filter(e => e.v1 && e.v1 <= r.v2 && e.v2 >= r.v1);
+  if (parte.length) return { lista: parte, nota: 'Mostrando o que você salvou destes versículos; cobre só parte do pedido.' };
+  return { lista: [], nota: '' };
+}
+function htmlMensagem(){
+  if (MSGS === null) return '<p class="aviso">Carregando…</p>';
+  if (msgErro) return `<p class="erro">${esc(msgErro)}</p>`;
+  const { lista, nota } = textosDaRef(atual);
+  const incluir = `<button class="btn ${lista.length ? 'peq' : 'ouro'}" type="button" data-msg-incluir>${lista.length ? 'Incluir outro trecho' : 'Incluir texto'}</button>`;
+  if (!lista.length) return `<p class="aviso" style="margin-top:0">Nenhum texto salvo para ${esc(curta({ livro: atual.id, cap: atual.cap, v1: atual.v1, v2: atual.v2 }))}.</p>${incluir}`;
+  return (nota ? `<p class="msg-nota">${esc(nota)}</p>` : '') + lista.map(e => `<div class="msg-bloco">
+      <div class="msg-ref">${esc(curta(e))}</div>
+      <div class="msg-texto" lang="pt">${esc(e.texto)}</div>
+      <div class="msg-botoes">
+        <button class="btn peq" type="button" data-msg-copiar="${esc(e.id)}">Copiar</button>
+        <button class="btn peq" type="button" data-msg-editar="${esc(e.id)}">Editar</button>
+        <button class="btn peq perigo" type="button" data-msg-excluir="${esc(e.id)}">Excluir</button>
+      </div></div>`).join('') + (lista.some(e => e.v1 === atual.v1 && e.v2 === atual.v2) ? '' : `<div class="msg-botoes">${incluir}</div>`);
+}
+function ligarMensagem(){}   // os botões usam o clique geral abaixo
+function pintarListaMsg(){
+  $('#msgConta').textContent = MSGS && MSGS.length ? `(${MSGS.length})` : '';
+  if (msgErro){ $('#listaMsg').innerHTML = `<li class="erro">${esc(msgErro)}</li>`; return; }
+  if (!MSGS || !MSGS.length){ $('#listaMsg').innerHTML = '<li class="aviso">Nenhum texto salvo ainda. Abra uma referência e use “Incluir texto” na coluna A Mensagem.</li>'; return; }
+  $('#listaMsg').innerHTML = MSGS.map(e => `<li>
+    <span class="r">${esc(curta(e))}</span>
+    <span class="p">${esc(e.texto.replace(/\s+/g, ' ').slice(0, 120))}</span>
+    <button class="btn peq" type="button" data-msg-abrir="${esc(e.id)}">Abrir</button>
+    <button class="btn peq" type="button" data-msg-editar="${esc(e.id)}">Editar</button>
+    <button class="btn peq perigo" type="button" data-msg-excluir="${esc(e.id)}">Excluir</button></li>`).join('');
+}
+/* caixa de incluir / editar */
+let editando = null;   // id ou null (novo)
+function abrirCaixa(e){
+  editando = e ? e.id : null;
+  $('#dlgTitulo').textContent = e ? 'EDITAR · A MENSAGEM' : 'INCLUIR · A MENSAGEM';
+  $('#mRef').value = e ? curta(e) : curta({ livro: atual.id, cap: atual.cap, v1: atual.v1, v2: atual.v2 });
+  $('#mTexto').value = e ? e.texto : '';
+  $('#mErro').textContent = ''; $('#mSalvar').disabled = false;
+  $('#dlgMsg').showModal(); setTimeout(() => $('#mTexto').focus(), 50);
+}
+$('#mCancelar').onclick = () => $('#dlgMsg').close();
+$('#fMsg').onsubmit = async ev => {
+  ev.preventDefault();
+  const r = lerRef($('#mRef').value), texto = $('#mTexto').value.replace(/\r/g, '').trim();
+  if (!r){ $('#mErro').textContent = 'Não entendi a referência. Exemplos: Jo 3.16 · Sl 23 · 1Co 13.4-7'; return; }
+  if (!texto){ $('#mErro').textContent = 'Digite ou cole o texto.'; return; }
+  const dup = MSGS.find(e => e.livro === r.id && e.cap === r.cap && e.v1 === r.v1 && e.v2 === r.v2 && e.id !== editando);
+  if (dup && !confirm(`Já existe um texto salvo para ${curta(dup)}. Substituir?`)) return;
+  $('#mSalvar').disabled = true; $('#mErro').textContent = '';
+  try {
+    const c = await clienteLogado();
+    const linha = { livro: r.id, cap: r.cap, v1: r.v1, v2: r.v2, referencia: textoRef(r), texto, atualizado: new Date().toISOString() };
+    let q;
+    if (dup){ q = await c.from('canivete_mensagem').update(linha).eq('id', dup.id); if (!q.error && editando) q = await c.from('canivete_mensagem').delete().eq('id', editando); }
+    else if (editando) q = await c.from('canivete_mensagem').update(linha).eq('id', editando);
+    else q = await c.from('canivete_mensagem').insert(linha);
+    if (q.error) throw q.error;
+    $('#dlgMsg').close();
+    await carregarMensagem();
+  } catch (e){
+    $('#mErro').textContent = faltaTabela(e) ? 'Falta criar a tabela no Supabase (rode o SQL canivete_mensagem.sql).' : 'Não consegui salvar: ' + (e.message || e);
+    $('#mSalvar').disabled = false;
+  }
+};
+async function excluirMsg(e){
+  if (!confirm(`Excluir o texto de A Mensagem de ${curta(e)}?\n\nEsta ação não pode ser desfeita.`)) return;
+  try {
+    const c = await clienteLogado();
+    const q = await c.from('canivete_mensagem').delete().eq('id', e.id);
+    if (q.error) throw q.error;
+    await carregarMensagem();
+  } catch (er){ alert('Não consegui excluir: ' + (er.message || er)); }
+}
+async function copiarMsg(e, botao){
+  const t = `${e.texto.trim()} (${curta(e)} – A Mensagem)`;
+  let ok = false;
+  try { await navigator.clipboard.writeText(t); ok = true; } catch {
+    const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select();
+    try { ok = document.execCommand('copy'); } catch {} a.remove();
+  }
+  if (botao){ const antes = botao.textContent; botao.textContent = ok ? 'Copiado ✓' : 'Não copiou'; setTimeout(() => botao.textContent = antes, 1800); }
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-msg-incluir],[data-msg-editar],[data-msg-excluir],[data-msg-copiar],[data-msg-abrir]');
+  if (!b) return;
+  const id = b.dataset.msgEditar || b.dataset.msgExcluir || b.dataset.msgCopiar || b.dataset.msgAbrir;
+  const e = id && (MSGS || []).find(x => x.id === id);
+  if (b.hasAttribute('data-msg-incluir')) return abrirCaixa(null);
+  if (!e) return;
+  if (b.dataset.msgEditar) abrirCaixa(e);
+  else if (b.dataset.msgExcluir) excluirMsg(e);
+  else if (b.dataset.msgCopiar) copiarMsg(e, b);
+  else if (b.dataset.msgAbrir){
+    atual = { id: e.livro, cap: e.cap, v1: e.v1, v2: e.v2 }; mostrar();
+    if (escolha.mensagem === false){ escolha.mensagem = true; gravarLS('canivete.comparar', escolha); pintarVersoes(); mostrar(); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
 
 function abrir(texto){
   const r = lerRef(texto);
@@ -436,6 +646,7 @@ $('#arqEpub').onchange = async e => {
 
 /* ---------- início ---------- */
 pintarVersoes();
+carregarMensagem();
 {
   const q = new URLSearchParams(location.search).get('ref') || lerLS('canivete.comparar.ref', '');
   if (q) abrir(q); else mostrar();
